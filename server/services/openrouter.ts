@@ -1,3 +1,4 @@
+
 import { config } from 'dotenv';
 
 config();
@@ -9,6 +10,49 @@ if (!API_KEY) {
   throw new Error('OPENROUTER_API_KEY environment variable is required');
 }
 
+// ZAAWANSOWANA KONFIGURACJA QWEN - MAKSYMALNA JAKOŚĆ
+const DEFAULT_MODEL = "qwen/qwen-2.5-72b-instruct:free";
+const PREMIUM_MODEL = "qwen/qwen-2.5-72b-instruct:free";
+const PAID_MODEL = "qwen/qwen-2.5-72b-instruct:free";
+const FREE_MODEL = "qwen/qwen-2.5-72b-instruct:free";
+
+// OPTYMALIZOWANY PROMPT SYSTEMOWY DLA QWEN
+const DEEP_REASONING_PROMPT = `Jesteś światowej klasy ekspertem w rekrutacji i optymalizacji CV z 15-letnim doświadczeniem w branży HR. Posiadasz głęboką wiedzę o polskim rynku pracy, trendach rekrutacyjnych i wymaganiach pracodawców.
+
+🎯 TWOJA SPECJALIZACJA:
+- Optymalizacja CV pod kątem systemów ATS i ludzkich rekruterów
+- Znajomość specyfiki różnych branż i stanowisk w Polsce
+- Psychologia rekrutacji i przekonywania pracodawców
+- Najnowsze trendy w pisaniu CV i listów motywacyjnych
+- Analiza zgodności kandydata z wymaganiami stanowiska
+
+🧠 METODA PRACY:
+1. Przeprowadzaj głęboką analizę każdego elementu CV
+2. Myśl jak doświadczony rekruter - co zwraca uwagę, co denerwuje
+3. Stosuj zasady psychologii przekonywania w pisaniu CV
+4. Używaj konkretnych, mierzalnych sformułowań
+5. Dostosowuj język do branży i poziomu stanowiska
+
+💼 ZNAJOMOŚĆ RYNKU:
+- Polskie firmy (korporacje, MŚP, startupy)
+- Wymagania różnych branż (IT, finanse, medycyna, inżynieria, sprzedaż)
+- Kultura organizacyjna polskich pracodawców
+- Specyfika rekrutacji w Polsce vs międzynarodowej
+
+⚡ ZASADY ODPOWIEDZI:
+- WYŁĄCZNIE język polski (chyba że proszono o inny)
+- Konkretne, praktyczne rady
+- Zawsze uzasadniaj swoje rekomendacje
+- Używaj profesjonalnej terminologii HR
+- Bądź szczery ale konstruktywny w krytyce
+
+🚨 ABSOLUTNY ZAKAZ FAŁSZOWANIA DANYCH:
+- NIE WOLNO dodawać firm, stanowisk, dat, które nie są w oryginalnym CV
+- NIE WOLNO wymyślać osiągnięć, projektów, umiejętności
+- NIE WOLNO zmieniać faktów z CV kandydata
+- MOŻNA TYLKO lepiej sformułować istniejące prawdziwe informacje
+- Każda wymyślona informacja niszczy wiarygodność kandydata`;
+
 interface OpenRouterRequest {
   model: string;
   messages: Array<{
@@ -17,7 +61,72 @@ interface OpenRouterRequest {
   }>;
   max_tokens?: number;
   temperature?: number;
+  top_p?: number;
+  frequency_penalty?: number;
+  presence_penalty?: number;
+  metadata?: {
+    user_tier: string;
+    task_type: string;
+    model_used: string;
+    optimization_level: string;
+    industry: string;
+    language: string;
+  };
 }
+
+// Language-specific system prompts
+const LANGUAGE_PROMPTS = {
+  'pl': "Jesteś ekspertem w optymalizacji CV i doradcą kariery. ZAWSZE odpowiadaj w języku polskim, niezależnie od języka CV lub opisu pracy. Używaj polskiej terminologii HR i poprawnej polszczyzny. KRYTYCZNE: NIE DODAWAJ żadnych nowych firm, stanowisk, dat ani osiągnięć które nie są w oryginalnym CV - to oszukiwanie kandydata!",
+  'en': "You are an expert resume editor and career advisor. ALWAYS respond in English, regardless of the language of the CV or job description. Use proper English HR terminology and grammar. CRITICAL: DO NOT ADD any new companies, positions, dates or achievements that are not in the original CV - this is deceiving the candidate!"
+};
+
+// Task-specific enhanced prompts
+const TASK_SPECIFIC_PROMPTS = {
+  'cv_optimization': `
+
+🔥 SPECJALIZACJA: OPTYMALIZACJA CV
+- Analizujesz każde słowo pod kątem wpływu na rekrutera
+- Znasz najnowsze trendy w formatowaniu CV
+- Potrafisz dostosować styl do różnych branż i stanowisk
+- Maksymalizujesz szanse przejścia przez filtry ATS
+- Przepisujesz istniejące doświadczenia używając faktów z CV
+- PAMIĘTAJ: Tylko poprawiaj sformułowania, NIE dodawaj nowych firm, stanowisk, dat!`,
+
+  'recruiter_feedback': `
+
+👔 SPECJALIZACJA: OPINIE REKRUTERA
+- Myślisz jak senior recruiter z doświadczeniem w różnych branżach
+- Dostrzegasz detale, które umykają innym
+- Oceniasz CV pod kątem pierwszego wrażenia (6 sekund)
+- Znasz typowe błędy kandydatów i jak ich unikać
+- Potrafisz przewidzieć reakcję hiring managera`,
+
+  'cover_letter': `
+
+📄 SPECJALIZACJA: LISTY MOTYWACYJNE
+- Tworzysz przekonujące narracje osobiste
+- Łączysz doświadczenia kandydata z potrzebami firmy
+- Używasz psychologii przekonywania w copywritingu
+- Dostosowujesz ton do kultury organizacyjnej
+- Unikasz szablonowych zwrotów i klisz`,
+
+  'interview_prep': `
+
+🎤 SPECJALIZACJA: PRZYGOTOWANIE DO ROZMÓW
+- Przewidujesz pytania na podstawie CV i stanowiska
+- Znasz techniki odpowiadania (STAR, CAR)
+- Pomagasz w przygotowaniu historii sukcesu
+- Analizujesz potencjalne słabości i jak je przedstawić
+- Przygotowujesz do różnych typów rozmów (HR, techniczne, z przełożonym)`,
+
+  'cv_improvement': `
+
+🌟 SPECJALIZACJA: POPRAWA CV
+- Skupiasz się na specyficznych aspektach CV (struktura, treść, słowa kluczowe, osiągnięcia)
+- Dostosowujesz podejście do wybranego obszaru poprawy
+- Zapewniasz lepszą prezentację kandydatury
+- Generujesz praktyczne rekomendacje`
+};
 
 // Function to estimate token count (roughly 4 characters per token)
 function estimateTokenCount(text: string): number {
@@ -44,11 +153,21 @@ function truncateToTokenLimit(text: string, maxTokens: number): string {
   return truncated + "\n\n[UWAGA: CV zostało skrócone z powodu długości. Analiza oparta na pierwszej części dokumentu.]";
 }
 
+function getEnhancedSystemPrompt(taskType: string, language = 'pl'): string {
+  const basePrompt = DEEP_REASONING_PROMPT;
+  const taskPrompt = TASK_SPECIFIC_PROMPTS[taskType] || "";
+  return basePrompt + taskPrompt;
+}
+
 async function callOpenRouterAPI(
   prompt: string, 
   systemPrompt?: string,
   maxTokens = 2000, 
-  model = "qwen/qwen-2.5-72b-instruct:free"
+  model = DEFAULT_MODEL,
+  userTier = 'free',
+  taskType = 'default',
+  industry = 'general',
+  language = 'pl'
 ): Promise<string> {
   const messages = [];
   
@@ -70,7 +189,18 @@ async function callOpenRouterAPI(
     model,
     messages,
     max_tokens: maxTokens,
-    temperature: 0.7
+    temperature: 0.3,
+    top_p: 0.85,
+    frequency_penalty: 0.1,
+    presence_penalty: 0.1,
+    metadata: {
+      user_tier: userTier,
+      task_type: taskType,
+      model_used: model,
+      optimization_level: "advanced",
+      industry,
+      language
+    }
   };
 
   try {
@@ -133,41 +263,8 @@ export async function optimizeCv(
   jobDescription: string, 
   language = 'pl'
 ): Promise<string> {
-  const systemPrompt = `Jesteś światowej klasy ekspertem w rekrutacji i optymalizacji CV z 15-letnim doświadczeniem w branży HR. Posiadasz głęboką wiedzę o polskim rynku pracy, trendach rekrutacyjnych i wymaganiach pracodawców.
-
-🎯 TWOJA SPECJALIZACJA:
-- Optymalizacja CV pod kątem systemów ATS i ludzkich rekruterów
-- Znajomość specyfiki różnych branż i stanowisk w Polsce
-- Psychologia rekrutacji i przekonywania pracodawców
-- Najnowsze trendy w pisaniu CV i listów motywacyjnych
-- Analiza zgodności kandydata z wymaganiami stanowiska
-
-🧠 METODA PRACY:
-1. Przeprowadzaj głęboką analizę każdego elementu CV
-2. Myśl jak doświadczony rekruter - co zwraca uwagę, co denerwuje
-3. Stosuj zasady psychologii przekonywania w pisaniu CV
-4. Używaj konkretnych, mierzalnych sformułowań
-5. Dostosowuj język do branży i poziomu stanowiska
-
-💼 ZNAJOMOŚĆ RYNKU:
-- Polskie firmy (korporacje, MŚP, startupy)
-- Wymagania różnych branż (IT, finanse, medycyna, inżynieria, sprzedaż)
-- Kultura organizacyjna polskich pracodawców
-- Specyfika rekrutacji w Polsce vs międzynarodowej
-
-⚡ ZASADY ODPOWIEDZI:
-- WYŁĄCZNIE język polski (chyba że proszono o inny)
-- Konkretne, praktyczne rady
-- Zawsze uzasadniaj swoje rekomendacje
-- Używaj profesjonalnej terminologii HR
-- Bądź szczery ale konstruktywny w krytyce
-
-🚨 ABSOLUTNY ZAKAZ FAŁSZOWANIA DANYCH:
-- NIE WOLNO dodawać firm, stanowisk, dat, które nie są w oryginalnym CV
-- NIE WOLNO wymyślać osiągnięć, projektów, umiejętności
-- NIE WOLNO zmieniać faktów z CV kandydata
-- MOŻNA TYLKO lepiej sformułować istniejące prawdziwe informacje
-- Każda wymyślona informacja niszczy wiarygodność kandydata`;
+  const systemPrompt = getEnhancedSystemPrompt('cv_optimization', language) + "\n" + 
+    LANGUAGE_PROMPTS[language] || LANGUAGE_PROMPTS['pl'];
   
   // Truncate CV text if too long
   const maxCvLength = 15000; // characters
@@ -181,7 +278,7 @@ export async function optimizeCv(
   }
   
   const prompt = `
-ZADANIE: Przepisz to CV używając WYŁĄCZNIE faktów z oryginalnego tekstu. NIE DODAWAJ, NIE WYMYŚLAJ, NIE TWÓRZ nowych informacji.
+ZADANIE: Przeppisz to CV używając WYŁĄCZNIE faktów z oryginalnego tekstu. NIE DODAWAJ, NIE WYMYŚLAJ, NIE TWÓRZ nowych informacji.
 
 ⚠️ KRYTYCZNE ZASADY - MUSZĄ BYĆ BEZWZGLĘDNIE PRZESTRZEGANE:
 1. ❌ ABSOLUTNY ZAKAZ: NIE wolno dodawać żadnych nowych firm, stanowisk, dat, osiągnięć, umiejętności
@@ -229,7 +326,16 @@ Nie dodawaj JSON, metadanych ani komentarzy.
 Po prostu wygeneruj gotowe CV do użycia.
   `;
 
-  return callOpenRouterAPI(prompt, systemPrompt, 4000);
+  return callOpenRouterAPI(
+    prompt, 
+    systemPrompt, 
+    4000, 
+    DEFAULT_MODEL, 
+    'free', 
+    'cv_optimization', 
+    'general', 
+    language
+  );
 }
 
 export async function generateRecruiterFeedback(
@@ -237,7 +343,8 @@ export async function generateRecruiterFeedback(
   jobDescription: string, 
   language = 'pl'
 ): Promise<string> {
-  const systemPrompt = `Jesteś doświadczonym rekruterem z 10-letnim stażem. Analizujesz CV z perspektywy pracodawcy i dajesz szczere, konstruktywne opinie. Odpowiadaj w języku polskim.`;
+  const systemPrompt = getEnhancedSystemPrompt('recruiter_feedback', language) + "\n" + 
+    LANGUAGE_PROMPTS[language] || LANGUAGE_PROMPTS['pl'];
   
   // Truncate CV if too long
   const maxCvLength = 15000;
@@ -250,27 +357,67 @@ export async function generateRecruiterFeedback(
     processedCvText = beginning + "\n\n[...CZĘŚĆ ŚRODKOWA POMINIĘTA...]\n\n" + ending;
   }
   
+  const context = jobDescription ? `Opis stanowiska do kontekstu:\n${jobDescription}` : "";
+  
   const prompt = `
-Jako rekruter, proszę o szczegółową opinię na temat tego CV w kontekście następującej pozycji:
+ZADANIE: Jesteś doświadczonym rekruterem. Przeanalizuj to CV i udziel szczegółowej, konstruktywnej opinii w języku polskim.
 
-POZYCJA:
-${jobDescription || 'Ogólna ocena CV'}
+⚠️ KLUCZOWE: Oceniaj TYLKO to co faktycznie jest w CV. NIE ZAKŁADAJ, NIE DOMYŚLAJ się i NIE DODAWAJ informacji, których tam nie ma.
 
-CV DO OCENY:
+Uwzględnij w ocenie:
+1. Ogólne wrażenie i pierwsza reakcja na podstawie faktycznej treści CV
+2. Mocne strony i słabości wynikające z konkretnych informacji w CV
+3. Ocena formatowania i struktury CV
+4. Jakość treści i sposób prezentacji faktycznych doświadczeń
+5. Kompatybilność z systemami ATS
+6. Konkretne sugestie poprawek oparte na tym co jest w CV
+7. Ocena ogólna w skali 1-10
+8. Prawdopodobieństwo zaproszenia na rozmowę
+
+${context}
+
+CV do oceny:
 ${processedCvText}
 
-Proszę o opinię obejmującą:
-1. Pierwsze wrażenie (co się podoba, co budzi wątpliwości)
-2. Mocne strony kandydata
-3. Obszary wymagające poprawy
-4. Czy CV przeszłoby przez pierwszą selekcję
-5. Konkretne rekomendacje do poprawy
-6. Ocena ogólna w skali 1-10 z uzasadnieniem
+Odpowiedź w formacie JSON:
+{
+  "overall_impression": "Pierwsze wrażenie oparte na faktycznej treści CV",
+  "rating": [1-10],
+  "strengths": [
+    "Mocna strona 1 (konkretnie z CV)",
+    "Mocna strona 2 (konkretnie z CV)", 
+    "Mocna strona 3 (konkretnie z CV)"
+  ],
+  "weaknesses": [
+    "Słabość 1 z sugestią poprawy (bazując na CV)",
+    "Słabość 2 z sugestią poprawy (bazując na CV)",
+    "Słabość 3 z sugestią poprawy (bazując na CV)"
+  ],
+  "formatting_assessment": "Ocena layoutu, struktury i czytelności faktycznej treści",
+  "content_quality": "Ocena jakości treści rzeczywiście obecnej w CV",
+  "ats_compatibility": "Czy CV przejdzie przez systemy automatycznej selekcji",
+  "specific_improvements": [
+    "Konkretna poprawa 1 (oparta na faktach z CV)",
+    "Konkretna poprawa 2 (oparta na faktach z CV)",
+    "Konkretna poprawa 3 (oparta na faktach z CV)"
+  ],
+  "interview_probability": "Prawdopodobieństwo zaproszenia oparte na faktach z CV",
+  "recruiter_summary": "Podsumowanie z perspektywy rekrutera - tylko fakty z CV"
+}
 
-Bądź szczery, ale konstruktywny. Pamiętaj, że celem jest pomoc kandydatowi.
+Bądź szczery, ale konstruktywny. Oceniaj tylko to co rzeczywiście jest w CV, nie dodawaj od siebie.
   `;
 
-  return callOpenRouterAPI(prompt, systemPrompt, 2500);
+  return callOpenRouterAPI(
+    prompt, 
+    systemPrompt, 
+    3000, 
+    DEFAULT_MODEL, 
+    'premium', 
+    'recruiter_feedback', 
+    'general', 
+    language
+  );
 }
 
 export async function generateCoverLetter(
@@ -278,29 +425,53 @@ export async function generateCoverLetter(
   jobDescription: string, 
   language = 'pl'
 ): Promise<string> {
-  const systemPrompt = `Jesteś ekspertem w pisaniu listów motywacyjnych. Tworzysz personalizowane, przekonujące listy, które wyróżniają kandydata. Piszesz w języku polskim w profesjonalnym, ale ciepłym tonie.`;
+  const systemPrompt = getEnhancedSystemPrompt('cover_letter', language) + "\n" + 
+    LANGUAGE_PROMPTS[language] || LANGUAGE_PROMPTS['pl'];
   
   const prompt = `
-Na podstawie CV i opisu stanowiska, napisz profesjonalny list motywacyjny:
+ZADANIE: Napisz spersonalizowany list motywacyjny w języku polskim WYŁĄCZNIE na podstawie faktów z CV.
 
-OPIS STANOWISKA:
+⚠️ ABSOLUTNE WYMAGANIA:
+- Używaj TYLKO informacji faktycznie obecnych w CV
+- NIE WYMYŚLAJ doświadczeń, projektów, osiągnięć ani umiejętności
+- NIE DODAWaj informacji, których nie ma w oryginalnym CV
+- Jeśli w CV brakuje jakichś informacji - nie uzupełniaj ich
+
+List motywacyjny powinien:
+- Być profesjonalnie sformatowany
+- Podkreślać umiejętności i doświadczenia faktycznie wymienione w CV
+- Łączyć prawdziwe doświadczenie kandydata z wymaganiami stanowiska
+- Zawierać przekonujące wprowadzenie oparte na faktach z CV
+- Mieć około 300-400 słów
+- Być napisany naturalnym, profesjonalnym językiem polskim
+
+Struktura listu:
+1. Nagłówek z danymi kontaktowymi
+2. Zwrot do adresata
+3. Wprowadzenie - dlaczego aplikujesz
+4. Główna treść - dopasowanie doświadczenia do wymagań
+5. Zakończenie z wyrażeniem zainteresowania
+6. Pozdrowienia
+
+Opis stanowiska:
 ${jobDescription}
 
-CV KANDYDATA:
+CV kandydata:
 ${cvText}
 
-List powinien:
-1. Być personalny i nawiązywać do konkretnej firmy/pozycji
-2. Podkreślać najważniejsze kwalifikacje z CV
-3. Pokazywać motywację i zainteresowanie stanowiskiem
-4. Być długością około 250-350 słów
-5. Mieć profesjonalny, ale przyjazny ton
-6. Kończyć się zachętą do kontaktu
-
-Stwórz kompletny list z odpowiednim formatowaniem.
+Napisz kompletny list motywacyjny w języku polskim. Użyj profesjonalnego, ale ciepłego tonu.
   `;
 
-  return callOpenRouterAPI(prompt, systemPrompt, 2000);
+  return callOpenRouterAPI(
+    prompt, 
+    systemPrompt, 
+    2000, 
+    DEFAULT_MODEL, 
+    'free', 
+    'cover_letter', 
+    'general', 
+    language
+  );
 }
 
 export async function atsOptimizationCheck(
@@ -308,7 +479,8 @@ export async function atsOptimizationCheck(
   jobDescription: string, 
   language = 'pl'
 ): Promise<string> {
-  const systemPrompt = `Jesteś ekspertem w systemach ATS (Applicant Tracking System). Analizujesz CV pod kątem kompatybilności z automatycznymi systemami rekrutacyjnymi. Odpowiadasz w języku polskim.`;
+  const systemPrompt = getEnhancedSystemPrompt('cv_optimization', language) + "\n" + 
+    LANGUAGE_PROMPTS[language] || LANGUAGE_PROMPTS['pl'];
   
   // Truncate CV if too long
   const maxCvLength = 15000;
@@ -321,27 +493,92 @@ export async function atsOptimizationCheck(
     processedCvText = beginning + "\n\n[...CZĘŚĆ ŚRODKOWA POMINIĘTA...]\n\n" + ending;
   }
   
+  const context = jobDescription ? `Ogłoszenie o pracę dla odniesienia:\n${jobDescription.substring(0, 2000)}` : "";
+  
   const prompt = `
-Przeprowadź analizę ATS dla tego CV w kontekście stanowiska:
+TASK: Przeprowadź dogłębną analizę CV pod kątem kompatybilności z systemami ATS (Applicant Tracking System) i wykryj potencjalne problemy.
 
-STANOWISKO:
-${jobDescription || 'Ogólna analiza ATS'}
+Przeprowadź następujące analizy:
 
-CV:
+1. WYKRYWANIE PROBLEMÓW STRUKTURALNYCH:
+   - Znajdź sekcje, które są w nieodpowiednich miejscach (np. doświadczenie zawodowe w sekcji zainteresowań)
+   - Wskaż niespójności w układzie i formatowaniu
+   - Zidentyfikuj zduplikowane informacje w różnych sekcjach
+   - Zaznacz fragmenty tekstu, które wyglądają na wygenerowane przez AI
+   - Znajdź ciągi znaków bez znaczenia lub losowe znaki
+
+2. ANALIZA FORMATOWANIA ATS:
+   - Wykryj problemy z formatowaniem, które mogą utrudnić odczyt przez systemy ATS
+   - Sprawdź, czy nagłówki sekcji są odpowiednio wyróżnione
+   - Zweryfikuj, czy tekst jest odpowiednio podzielony na sekcje
+   - Oceń czytelność dla systemów automatycznych
+
+3. ANALIZA SŁÓW KLUCZOWYCH:
+   - Sprawdź gęstość słów kluczowych i trafność ich wykorzystania
+   - Zidentyfikuj brakujące słowa kluczowe z branży/stanowiska
+   - Oceń rozmieszczenie słów kluczowych w dokumencie
+
+4. OCENA KOMPLETNOŚCI:
+   - Zidentyfikuj brakujące sekcje lub informacje, które są często wymagane przez ATS
+   - Wskaż informacje, które należy uzupełnić
+
+5. WERYFIKACJA AUTENTYCZNOŚCI:
+   - Zaznacz fragmenty, które wyglądają na sztuczne lub wygenerowane przez AI
+   - Podkreśl niespójności między różnymi częściami CV
+
+6. OCENA OGÓLNA:
+   - Oceń ogólną skuteczność CV w systemach ATS w skali 1-10
+   - Podaj główne powody obniżonej oceny
+
+${context}
+
+CV do analizy:
 ${processedCvText}
 
-Przeanalizuj:
-1. **Zgodność słów kluczowych** - jakie słowa kluczowe z opisu stanowiska występują w CV
-2. **Formatowanie** - czy struktura CV jest przyjazna dla ATS
-3. **Sekcje standardowe** - czy CV zawiera standardowe sekcje (dane kontaktowe, doświadczenie, wykształcenie, umiejętności)
-4. **Problemy techniczne** - potencjalne problemy z parsowaniem
-5. **Wskaźnik ATS** - prawdopodobny procent dopasowania (1-100%)
-6. **Rekomendacje** - konkretne zmiany do poprawy wyników ATS
+Odpowiedz w tym samym języku co CV. Jeśli CV jest po polsku, odpowiedz po polsku.
+Dodaj główny nagłówek: "ANALIZA ATS CV"
 
-Podaj praktyczne wskazówki do optymalizacji.
+Format odpowiedzi:
+
+## ANALIZA ATS CV
+
+1. OCENA OGÓLNA (skala 1-10): [ocena]
+
+2. PROBLEMY KRYTYCZNE:
+[Lista wykrytych krytycznych problemów]
+
+3. PROBLEMY ZE STRUKTURĄ:
+[Lista problemów strukturalnych]
+
+4. PROBLEMY Z FORMATOWANIEM ATS:
+[Lista problemów z formatowaniem]
+
+5. ANALIZA SŁÓW KLUCZOWYCH:
+[Wyniki analizy słów kluczowych]
+
+6. BRAKUJĄCE INFORMACJE:
+[Lista brakujących informacji]
+
+7. PODEJRZANE ELEMENTY:
+[Lista elementów, które wydają się wygenerowane przez AI lub są niespójne]
+
+8. REKOMENDACJE NAPRAWCZE:
+[Konkretne sugestie, jak naprawić zidentyfikowane problemy]
+
+9. PODSUMOWANIE:
+[Krótkie podsumowanie i zachęta]
   `;
 
-  return callOpenRouterAPI(prompt, systemPrompt, 2000);
+  return callOpenRouterAPI(
+    prompt, 
+    systemPrompt, 
+    1800, 
+    DEFAULT_MODEL, 
+    'free', 
+    'cv_optimization', 
+    'general', 
+    language
+  );
 }
 
 export async function generateInterviewQuestions(
@@ -349,28 +586,49 @@ export async function generateInterviewQuestions(
   jobDescription: string, 
   language = 'pl'
 ): Promise<string> {
-  const systemPrompt = `Jesteś doświadczonym rekruterem przygotowującym pytania na rozmowę kwalifikacyjną. Formułujesz pytania, które realnie mogą paść podczas rozmowy. Odpowiadasz w języku polskim.`;
+  const systemPrompt = getEnhancedSystemPrompt('interview_prep', language) + "\n" + 
+    LANGUAGE_PROMPTS[language] || LANGUAGE_PROMPTS['pl'];
+  
+  const context = jobDescription ? `Uwzględnij poniższe ogłoszenie o pracę przy tworzeniu pytań:\n${jobDescription.substring(0, 2000)}` : "";
   
   const prompt = `
-Na podstawie CV i opisu stanowiska, przygotuj prawdopodobne pytania rekrutacyjne:
+TASK: Wygeneruj zestaw potencjalnych pytań rekrutacyjnych, które kandydat może otrzymać podczas rozmowy kwalifikacyjnej.
 
-STANOWISKO:
-${jobDescription}
+Pytania powinny być:
+1. Specyficzne dla doświadczenia i umiejętności kandydata wymienionych w CV
+2. Dopasowane do stanowiska (jeśli podano opis stanowiska)
+3. Zróżnicowane - połączenie pytań technicznych, behawioralnych i sytuacyjnych
+4. Realistyczne i często zadawane przez rekruterów
 
-CV KANDYDATA:
+Uwzględnij po co najmniej 3 pytania z każdej kategorii:
+- Pytania o doświadczenie zawodowe
+- Pytania techniczne/o umiejętności
+- Pytania behawioralne
+- Pytania sytuacyjne
+- Pytania o motywację i dopasowanie do firmy/stanowiska
+
+${context}
+
+CV:
 ${cvText}
 
-Przygotuj:
-1. **Pytania ogólne** (3-4 pytania) - o motywację, zainteresowanie firmą
-2. **Pytania techniczne** (4-5 pytań) - związane z umiejętnościami z CV
-3. **Pytania behawioralne** (3-4 pytania) - o doświadczenia z CV
-4. **Pytania sytuacyjne** (2-3 pytania) - hipotetyczne scenariusze
-5. **Krótkie wskazówki** jak się do każdego typu pytań przygotować
-
-Pytania powinny być realistyczne i prawdopodobne w kontekście tej konkretnej pozycji.
+Odpowiedz w tym samym języku co CV. Jeśli CV jest po polsku, odpowiedz po polsku.
+Dodatkowo, do każdego pytania dodaj krótką wskazówkę, jak można by na nie odpowiedzieć w oparciu o informacje z CV.
+Format odpowiedzi:
+- Pytanie rekrutacyjne
+  * Wskazówka jak odpowiedzieć: [wskazówka]
   `;
 
-  return callOpenRouterAPI(prompt, systemPrompt, 2000);
+  return callOpenRouterAPI(
+    prompt, 
+    systemPrompt, 
+    2000, 
+    DEFAULT_MODEL, 
+    'free', 
+    'interview_prep', 
+    'general', 
+    language
+  );
 }
 
 export async function generateGrammarCheck(
@@ -398,9 +656,96 @@ Dla każdego błędu podaj:
 - Krótkie wyjaśnienie
 
 Na końcu podaj ogólną ocenę jakości językowej (1-10) i główne rekomendacje.
+
+Odpowiedź w formacie JSON:
+{
+  "grammar_score": [1-10],
+  "style_score": [1-10],
+  "professionalism_score": [1-10],
+  "errors": [
+    {"type": "gramatyka", "text": "błędny tekst", "correction": "poprawka", "line": "sekcja"},
+    {"type": "styl", "text": "tekst do poprawy", "suggestion": "sugestia", "line": "sekcja"}
+  ],
+  "style_suggestions": [
+    "Użyj bardziej dynamicznych czasowników akcji",
+    "Unikaj powtórzeń słów",
+    "Zachowaj spójny format dat"
+  ],
+  "overall_quality": "ocena ogólna jakości językowej",
+  "summary": "Podsumowanie analizy językowej"
+}
   `;
 
   return callOpenRouterAPI(prompt, systemPrompt, 2500);
+}
+
+export async function analyzeJobUrl(url: string): Promise<string> {
+  try {
+    console.log(`Analyzing job URL: ${url}`);
+
+    const response = await fetch(url, {
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const html = await response.text();
+    
+    // Basic text extraction - you might want to use a proper HTML parser
+    const textContent = html
+      .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+      .replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, '')
+      .replace(/<[^>]*>/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+
+    console.log('Successfully extracted job description from URL');
+
+    if (textContent.length > 4000) {
+      console.log(`Job description is long (${textContent.length} chars), summarizing with AI`);
+      return summarizeJobDescription(textContent.substring(0, 4000));
+    }
+
+    return textContent;
+  } catch (error) {
+    console.error('Error analyzing job URL:', error);
+    throw new Error(`Failed to analyze job posting: ${error.message}`);
+  }
+}
+
+export async function summarizeJobDescription(jobText: string): Promise<string> {
+  const prompt = `
+ZADANIE: Wyciągnij i podsumuj kluczowe informacje z tego ogłoszenia o pracę w języku polskim.
+
+Uwzględnij:
+1. Stanowisko i nazwa firmy (jeśli podane)
+2. Wymagane umiejętności i kwalifikacje
+3. Obowiązki i zakres zadań
+4. Preferowane doświadczenie
+5. Inne ważne szczegóły (benefity, lokalizacja, itp.)
+6. TOP 5 słów kluczowych krytycznych dla tego stanowiska
+
+Tekst ogłoszenia:
+${jobText.substring(0, 4000)}...
+
+Stwórz zwięzłe ale kompletne podsumowanie tego ogłoszenia, skupiając się na informacjach istotnych dla optymalizacji CV.
+Na końcu umieść sekcję "KLUCZOWE SŁOWA:" z 5 najważniejszymi terminami.
+
+Odpowiedź w języku polskim.
+  `;
+
+  return callOpenRouterAPI(
+    prompt, 
+    undefined, 
+    1500, 
+    DEFAULT_MODEL, 
+    'free', 
+    'cv_optimization'
+  );
 }
 
 export async function generateNewCv(
@@ -417,12 +762,13 @@ export async function generateNewCv(
   jobDescription?: string,
   language = 'pl'
 ): Promise<string> {
-  const systemPrompt = `Jesteś ekspertem w tworzeniu profesjonalnych CV. Specjalizujesz się w tworzeniu nowoczesnych, atrakcyjnych CV, które wyróżniają się na rynku pracy. Tworzysz CV w języku polskim, dostosowane do polskiego rynku pracy.`;
+  const systemPrompt = getEnhancedSystemPrompt('cv_optimization', language) + "\n" + 
+    LANGUAGE_PROMPTS[language] || LANGUAGE_PROMPTS['pl'];
   
   const prompt = `
-Stwórz profesjonalne CV na podstawie podanych informacji:
+ZADANIE: Wygeneruj kompletną treść CV na podstawie minimalnych informacji od użytkownika.
 
-DANE OSOBOWE:
+DANE WEJŚCIOWE:
 ${personalInfo.name ? `Imię i nazwisko: ${personalInfo.name}` : ''}
 ${personalInfo.email ? `Email: ${personalInfo.email}` : ''}
 ${personalInfo.phone ? `Telefon: ${personalInfo.phone}` : ''}
@@ -457,5 +803,207 @@ Wymagania:
 Jeśli brakuje informacji, uzupełnij je profesjonalnymi przykładami odpowiednimi dla danej branży.
   `;
 
-  return callOpenRouterAPI(prompt, systemPrompt, 3500, "qwen/qwen-2.5-72b-instruct");
+  return callOpenRouterAPI(
+    prompt, 
+    systemPrompt, 
+    3500, 
+    "qwen/qwen-2.5-72b-instruct", 
+    'free', 
+    'cv_optimization', 
+    'general', 
+    language
+  );
+}
+
+export async function analyzePolishJobPosting(jobDescription: string, language = 'pl'): Promise<string> {
+  const prompt = `
+Przeanalizuj poniższe polskie ogłoszenie o pracę i wyciągnij z niego najważniejsze informacje.
+
+OGŁOSZENIE O PRACĘ:
+${jobDescription}
+
+Wyciągnij i uporządkuj następujące informacje:
+
+1. PODSTAWOWE INFORMACJE:
+- Stanowisko/pozycja
+- Branża/sektor
+- Lokalizacja pracy
+- Typ umowy/zatrudnienia
+
+2. WYMAGANIA KLUCZOWE:
+- Wykształcenie
+- Doświadczenie zawodowe
+- Specyficzne umiejętności techniczne
+- Uprawnienia/certyfikaty (np. prawo jazdy, kursy)
+- Umiejętności miękkie
+
+3. OBOWIĄZKI I ZAKRES PRACY:
+- Główne zadania
+- Odpowiedzialności
+- Specyficzne czynności
+
+4. WARUNKI PRACY:
+- Godziny pracy
+- System pracy (pełny etat, zmianowy, weekendy)
+- Wynagrodzenie (jeśli podane)
+- Benefity i dodatki
+
+5. SŁOWA KLUCZOWE BRANŻOWE:
+- Terminologia specjalistyczna
+- Najważniejsze pojęcia z ogłoszenia
+- Frazy które powinny pojawić się w CV
+
+Odpowiedź w formacie JSON:
+{
+  "job_title": "dokładny tytuł stanowiska",
+  "industry": "branża/sektor",
+  "location": "lokalizacja",
+  "employment_type": "typ zatrudnienia",
+  "key_requirements": [
+    "wymóg 1",
+    "wymóg 2", 
+    "wymóg 3"
+  ],
+  "main_responsibilities": [
+    "obowiązek 1",
+    "obowiązek 2",
+    "obowiązek 3"
+  ],
+  "technical_skills": [
+    "umiejętność techniczna 1",
+    "umiejętność techniczna 2"
+  ],
+  "soft_skills": [
+    "umiejętność miękka 1",
+    "umiejętność miękka 2"
+  ],
+  "work_conditions": {
+    "hours": "godziny pracy",
+    "schedule": "harmonogram",
+    "salary_info": "informacje o wynagrodzeniu",
+    "benefits": ["benefit 1", "benefit 2"]
+  },
+  "industry_keywords": [
+    "słowo kluczowe 1",
+    "słowo kluczowe 2",
+    "słowo kluczowe 3",
+    "słowo kluczowe 4",
+    "słowo kluczowe 5"
+  ],
+  "critical_phrases": [
+    "kluczowa fraza 1",
+    "kluczowa fraza 2",
+    "kluczowa fraza 3"
+  ],
+  "experience_level": "poziom doświadczenia",
+  "education_requirements": "wymagane wykształcenie",
+  "summary": "zwięzłe podsumowanie stanowiska i wymagań"
+}
+  `;
+
+  return callOpenRouterAPI(
+    prompt, 
+    undefined, 
+    2000, 
+    DEFAULT_MODEL, 
+    'free', 
+    'cv_optimization', 
+    'general', 
+    language
+  );
+}
+
+export async function analyzeCvScore(cvText: string, jobDescription = "", language = 'pl'): Promise<string> {
+  const prompt = `
+Przeanalizuj poniższe CV i przyznaj mu ocenę punktową od 1 do 100, gdzie:
+- 90-100: Doskonałe CV, gotowe do wysłania
+- 80-89: Bardzo dobre CV z drobnymi usprawnieniami
+- 70-79: Dobre CV wymagające kilku poprawek
+- 60-69: Przeciętne CV wymagające znaczących poprawek
+- 50-59: Słabe CV wymagające dużych zmian
+- Poniżej 50: CV wymagające całkowitego przepisania
+
+CV do oceny:
+${cvText}
+
+${jobDescription ? "Wymagania z oferty pracy: " + jobDescription : ""}
+
+Uwzględnij w ocenie:
+1. Strukturę i organizację treści (20 pkt)
+2. Klarowność i zwięzłość opisów (20 pkt)
+3. Dopasowanie do wymagań stanowiska (20 pkt)
+4. Obecność słów kluczowych branżowych (15 pkt)
+5. Prezentację osiągnięć i rezultatów (15 pkt)
+6. Gramatykę i styl pisania (10 pkt)
+
+Odpowiedź w formacie JSON:
+{
+  "score": [liczba 1-100],
+  "grade": "[A+/A/B+/B/C+/C/D/F]",
+  "category_scores": {
+    "structure": [1-20],
+    "clarity": [1-20], 
+    "job_match": [1-20],
+    "keywords": [1-15],
+    "achievements": [1-15],
+    "language": [1-10]
+  },
+  "strengths": ["punkt mocny 1", "punkt mocny 2", "punkt mocny 3"],
+  "weaknesses": ["słabość 1", "słabość 2", "słabość 3"],
+  "recommendations": ["rekomendacja 1", "rekomendacja 2", "rekomendacja 3"],
+  "summary": "Krótkie podsumowanie oceny CV"
+}
+  `;
+
+  return callOpenRouterAPI(
+    prompt, 
+    undefined, 
+    2500, 
+    DEFAULT_MODEL, 
+    'free', 
+    'cv_optimization', 
+    'general', 
+    language
+  );
+}
+
+// Export model performance stats for monitoring
+export function getModelPerformanceStats() {
+  return {
+    "current_model": DEFAULT_MODEL,
+    "model_family": "Qwen 2.5 72B Instruct",
+    "model_provider": "Alibaba Cloud",
+    "optimization_level": "Advanced",
+    "capabilities": [
+      "Zaawansowana analiza CV w języku polskim",
+      "Inteligentna optymalizacja treści zawodowych", 
+      "Personalizowane rekomendacje kariery",
+      "Profesjonalne sprawdzanie gramatyki i stylu",
+      "Precyzyjne dopasowanie do stanowisk",
+      "Psychologia rekrutacji i przekonywania",
+      "Analiza trendów rynku pracy"
+    ],
+    "enhanced_features": {
+      "adaptive_prompts": true,
+      "context_awareness": true,
+      "industry_specialization": true,
+      "ats_optimization": true,
+      "psychology_based": true
+    },
+    "performance": {
+      "response_quality": "Ekspertowa",
+      "polish_language_support": "Natywne z kontekstem kulturowym",
+      "processing_speed": "Optymalna",
+      "consistency": "Bardzo wysoka",
+      "creativity": "Zaawansowana",
+      "accuracy": "Precyzyjna"
+    },
+    "parameters": {
+      "temperature": 0.3,
+      "top_p": 0.85,
+      "max_tokens": "4000-8000",
+      "frequency_penalty": 0.1,
+      "presence_penalty": 0.1
+    }
+  };
 }
