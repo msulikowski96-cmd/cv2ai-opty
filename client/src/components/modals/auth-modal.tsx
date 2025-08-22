@@ -6,7 +6,7 @@ import {
   DialogTitle 
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Bot } from "lucide-react";
+import { Bot, Code } from "lucide-react";
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -15,29 +15,98 @@ interface AuthModalProps {
 
 export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
   const [isLogin, setIsLogin] = useState(true);
+  const [isDeveloperMode, setIsDeveloperMode] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
   const [error, setError] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     
-    if (isLogin) {
-      // Handle login
-      console.log("Logging in with:", email, password);
-      // Replace with actual login API call
-      // Example: const response = await fetch('/api/login', { method: 'POST', body: JSON.stringify({ email, password }) });
-      // if (!response.ok) { setError('Invalid email or password'); }
-    } else {
-      // Handle registration
-      console.log("Registering with:", email, password);
-      // Replace with actual registration API call
-      // Example: const response = await fetch('/api/register', { method: 'POST', body: JSON.stringify({ email, password }) });
-      // if (!response.ok) { setError('Email already in use or other error'); }
+    try {
+      if (isDeveloperMode) {
+        // Handle developer login
+        const response = await fetch('/api/dev-login', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ username: email, password }),
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          setError(errorData.message || 'Nieprawidłowe dane developera');
+          return;
+        }
+
+        const data = await response.json();
+        console.log('Developer zalogowany:', data);
+        window.location.reload();
+      } else if (isLogin) {
+        // Handle login
+        const response = await fetch('/api/email-login', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ email, password }),
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          setError(errorData.message || 'Błąd logowania');
+          return;
+        }
+
+        const data = await response.json();
+        console.log('Zalogowano pomyślnie:', data);
+        window.location.reload(); // Odśwież stronę po zalogowaniu
+      } else {
+        // Handle registration
+        if (!firstName.trim()) {
+          setError('Imię jest wymagane');
+          return;
+        }
+        if (!lastName.trim()) {
+          setError('Nazwisko jest wymagane');
+          return;
+        }
+
+        const response = await fetch('/api/register', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ 
+            email, 
+            password, 
+            firstName: firstName.trim(), 
+            lastName: lastName.trim() 
+          }),
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          setError(errorData.message || 'Błąd podczas rejestracji');
+          return;
+        }
+
+        const data = await response.json();
+        console.log('Zarejestrowano pomyślnie:', data);
+        // Po udanej rejestracji przełącz na logowanie
+        setIsLogin(true);
+        setError('');
+        setPassword('');
+        alert('Konto zostało utworzone! Możesz się teraz zalogować.');
+      }
+    } catch (error) {
+      console.error('Network error:', error);
+      setError('Błąd połączenia z serwerem');
     }
-    // If successful, close modal or redirect
-    // onClose(); 
   };
 
   return (
@@ -56,28 +125,83 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <p className="text-center text-muted-foreground">
-            {isLogin 
-              ? 'Sign in to access your CV optimization tools'
-              : 'Join thousands of users optimizing their CVs with AI'
+            {isDeveloperMode 
+              ? 'Dostęp dla deweloperów' 
+              : isLogin 
+                ? 'Zaloguj się, aby uzyskać dostęp do narzędzi optymalizacji CV'
+                : 'Dołącz do tysięcy użytkowników optymalizujących swoje CV z AI'
             }
           </p>
 
+          {/* Developer mode toggle */}
+          <div className="flex justify-center">
+            <button
+              type="button"
+              onClick={() => {
+                setIsDeveloperMode(!isDeveloperMode);
+                setEmail('');
+                setPassword('');
+                setError('');
+              }}
+              className="flex items-center text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+            >
+              <Code className="w-3 h-3 mr-1" />
+              {isDeveloperMode ? 'Tryb użytkownika' : 'Tryb developera'}
+            </button>
+          </div>
+
+          {!isLogin && !isDeveloperMode && (
+            <>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label htmlFor="firstName" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Imię *
+                  </label>
+                  <input
+                    type="text"
+                    id="firstName"
+                    value={firstName}
+                    onChange={(e) => setFirstName(e.target.value)}
+                    required={!isLogin}
+                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                    placeholder="Jan"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="lastName" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Nazwisko *
+                  </label>
+                  <input
+                    type="text"
+                    id="lastName"
+                    value={lastName}
+                    onChange={(e) => setLastName(e.target.value)}
+                    required={!isLogin}
+                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                    placeholder="Kowalski"
+                  />
+                </div>
+              </div>
+            </>
+          )}
+          
           <div>
             <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-              Email
+              {isDeveloperMode ? 'Nazwa użytkownika *' : 'Email *'}
             </label>
             <input
-              type="email"
+              type={isDeveloperMode ? "text" : "email"}
               id="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
               className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+              placeholder={isDeveloperMode ? "developer" : "jan.kowalski@email.com"}
             />
           </div>
           <div>
             <label htmlFor="password" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-              Password
+              Hasło * {!isLogin && <span className="text-xs text-gray-500">(minimum 6 znaków)</span>}
             </label>
             <input
               type="password"
@@ -85,7 +209,9 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
+              minLength={6}
               className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+              placeholder={isLogin ? "Wprowadź hasło" : "Minimum 6 znaków"}
             />
           </div>
 
@@ -96,21 +222,28 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
             className="w-full bg-gradient-to-r from-primary-500 to-secondary-500 hover:shadow-lg transition-all duration-300"
             data-testid="button-auth-submit"
           >
-            {isLogin ? 'Sign In' : 'Sign Up'}
+            {isDeveloperMode 
+              ? 'Zaloguj jako Developer' 
+              : isLogin 
+                ? 'Zaloguj się' 
+                : 'Utwórz konto'
+            }
           </Button>
 
-          <div className="text-center">
-            <button
-              type="button"
-              onClick={() => setIsLogin(!isLogin)}
-              className="text-sm text-primary-500 hover:underline"
-            >
-              {isLogin 
-                ? 'Nie masz konta? Utwórz je tutaj'
-                : 'Masz już konto? Zaloguj się'
-              }
-            </button>
-          </div>
+          {!isDeveloperMode && (
+            <div className="text-center">
+              <button
+                type="button"
+                onClick={() => setIsLogin(!isLogin)}
+                className="text-sm text-primary-500 hover:underline"
+              >
+                {isLogin 
+                  ? 'Nie masz konta? Utwórz je tutaj'
+                  : 'Masz już konto? Zaloguj się'
+                }
+              </button>
+            </div>
+          )}
         </form>
       </DialogContent>
     </Dialog>
