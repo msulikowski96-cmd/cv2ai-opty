@@ -250,3 +250,60 @@ Na końcu podaj ogólną ocenę jakości językowej (1-10) i główne rekomendac
 
   return callOpenRouterAPI(prompt, systemPrompt, 2500);
 }
+
+export async function generateNewCv(
+  personalInfo: {
+    name?: string;
+    email?: string;
+    phone?: string;
+    location?: string;
+    profession?: string;
+  },
+  experience?: string,
+  education?: string,
+  skills?: string,
+  jobDescription?: string,
+  language = 'pl'
+): Promise<string> {
+  const systemPrompt = `Jesteś ekspertem w tworzeniu profesjonalnych CV. Specjalizujesz się w tworzeniu nowoczesnych, atrakcyjnych CV, które wyróżniają się na rynku pracy. Tworzysz CV w języku polskim, dostosowane do polskiego rynku pracy.`;
+  
+  const prompt = `
+Stwórz profesjonalne CV na podstawie podanych informacji:
+
+DANE OSOBOWE:
+${personalInfo.name ? `Imię i nazwisko: ${personalInfo.name}` : ''}
+${personalInfo.email ? `Email: ${personalInfo.email}` : ''}
+${personalInfo.phone ? `Telefon: ${personalInfo.phone}` : ''}
+${personalInfo.location ? `Lokalizacja: ${personalInfo.location}` : ''}
+${personalInfo.profession ? `Zawód/Specjalizacja: ${personalInfo.profession}` : ''}
+
+${experience ? `DOŚWIADCZENIE ZAWODOWE:\n${experience}` : ''}
+
+${education ? `WYKSZTAŁCENIE:\n${education}` : ''}
+
+${skills ? `UMIEJĘTNOŚCI:\n${skills}` : ''}
+
+${jobDescription ? `DOCELOWE STANOWISKO:\n${jobDescription}` : ''}
+
+Utwórz kompletne, profesjonalne CV zawierające:
+
+1. **Dane kontaktowe** - czytelnie sformatowane
+2. **Profil zawodowy** - krótki, atrakcyjny opis (2-3 zdania)
+3. **Doświadczenie zawodowe** - z datami, nazwami firm, stanowiskami i opisami obowiązków
+4. **Wykształcenie** - z datami, nazwami uczelni/szkół i kierunkami
+5. **Umiejętności** - podzielone na kategorie (techniczne, językowe, miękkie)
+6. **Dodatkowe sekcje** - jeśli relevant (certyfikaty, języki, zainteresowania)
+
+Wymagania:
+- Nowoczesny, czytelny format
+- Profesjonalny język biznesowy
+- Dostosowanie do polskiego rynku pracy
+- Konkretne opisy osiągnięć i obowiązków
+- Optymalizacja pod systemy ATS
+- Format gotowy do użycia
+
+Jeśli brakuje informacji, uzupełnij je profesjonalnymi przykładami odpowiednimi dla danej branży.
+  `;
+
+  return callOpenRouterAPI(prompt, systemPrompt, 3500, "qwen/qwen-2.5-72b-instruct");
+}

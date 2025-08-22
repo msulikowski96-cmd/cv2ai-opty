@@ -4,7 +4,7 @@ import Stripe from "stripe";
 import multer from "multer";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
-import { optimizeCv, generateRecruiterFeedback, generateCoverLetter, atsOptimizationCheck, generateInterviewQuestions } from "./services/openrouter";
+import { optimizeCv, generateRecruiterFeedback, generateCoverLetter, atsOptimizationCheck, generateInterviewQuestions, generateNewCv } from "./services/openrouter";
 import { extractTextFromPdf } from "./services/pdf-processor";
 import { rateLimiter } from "./middleware/rate-limiter";
 
@@ -196,6 +196,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error fetching usage stats:', error);
       res.status(500).json({ message: 'Failed to fetch usage stats' });
+    }
+  });
+
+  // Generate new CV using Qwen 72B
+  app.post('/api/generate-new-cv', isAuthenticated, rateLimiter, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { personalInfo, experience, education, skills, jobDescription } = req.body;
+
+      if (!personalInfo?.name) {
+        return res.status(400).json({ message: 'Imię i nazwisko są wymagane' });
+      }
+
+      const result = await generateNewCv(
+        personalInfo,
+        experience,
+        education,
+        skills,
+        jobDescription
+      );
+
+      // Save generated CV as a new upload
+      const cvUpload = await storage.createCvUpload({
+        userId,
+        filename: `Wygenerowane_CV_${personalInfo.name?.replace(/\s+/g, '_')}_${Date.now()}.txt`,
+        originalText: result,
+        jobDescription: jobDescription || '',
+      });
+
+      await storage.incrementUsageStat(userId, 'optimizedCvs');
+
+      res.json({ 
+        success: true, 
+        result, 
+        cvUploadId: cvUpload.id,
+        message: 'Nowe CV zostało wygenerowane pomyślnie!'
+      });
+    } catch (error) {
+      console.error('CV generation error:', error);
+      res.status(500).json({ message: 'Błąd podczas generowania CV' });
     }
   });
 

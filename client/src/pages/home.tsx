@@ -6,13 +6,15 @@ import Footer from "@/components/layout/footer";
 import FileUpload from "@/components/ui/file-upload";
 import CvAnalyzer from "@/components/cv/cv-analyzer";
 import CvResults from "@/components/cv/cv-results";
+import CvGenerator from "@/components/cv/cv-generator";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/useAuth";
-import { Upload, FileText, BarChart3, Crown, LogOut } from "lucide-react";
+import { Upload, FileText, BarChart3, Crown, LogOut, Sparkles } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface CvUpload {
   id: string;
@@ -28,6 +30,7 @@ export default function Home() {
   const queryClient = useQueryClient();
   const [selectedCvId, setSelectedCvId] = useState<string | null>(null);
   const [analysisMode, setAnalysisMode] = useState(false);
+  const [activeTab, setActiveTab] = useState("upload");
 
   // Fetch user's CV uploads
   const { data: cvUploads = [], isLoading: uploadsLoading } = useQuery<CvUpload[]>({
@@ -77,6 +80,12 @@ export default function Home() {
       formData.append('jobDescription', jobDescription);
     }
     uploadMutation.mutate(formData);
+  };
+
+  const handleCvGenerated = (cvId: string, result: string) => {
+    setSelectedCvId(cvId);
+    setAnalysisMode(true);
+    setActiveTab("upload"); // Switch to analysis tab after generation
   };
 
   const hasBasicAccess = user?.basicPurchased;
@@ -177,25 +186,44 @@ export default function Home() {
         )}
 
         <div className="grid lg:grid-cols-3 gap-8">
-          {/* CV Upload Section */}
+          {/* CV Upload/Generate Section */}
           <div className="lg:col-span-2">
             {!analysisMode ? (
-              <Card className="glass">
-                <CardHeader>
-                  <CardTitle className="flex items-center">
-                    <Upload className="w-5 h-5 mr-2" />
-                    Upload New CV
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <FileUpload
-                    onFileSelect={handleFileUpload}
-                    isLoading={uploadMutation.isPending}
-                    showJobDescription={true}
-                    data-testid="cv-upload-home"
-                  />
-                </CardContent>
-              </Card>
+              <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+                <TabsList className="grid w-full grid-cols-2 mb-6">
+                  <TabsTrigger value="upload" className="flex items-center gap-2">
+                    <Upload className="w-4 h-4" />
+                    Przeanalizuj CV
+                  </TabsTrigger>
+                  <TabsTrigger value="generate" className="flex items-center gap-2">
+                    <Sparkles className="w-4 h-4" />
+                    Wygeneruj nowe CV
+                  </TabsTrigger>
+                </TabsList>
+
+                <TabsContent value="upload">
+                  <Card className="glass">
+                    <CardHeader>
+                      <CardTitle className="flex items-center">
+                        <Upload className="w-5 h-5 mr-2" />
+                        Prześlij CV do analizy
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <FileUpload
+                        onFileSelect={handleFileUpload}
+                        isLoading={uploadMutation.isPending}
+                        showJobDescription={true}
+                        data-testid="cv-upload-home"
+                      />
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+
+                <TabsContent value="generate">
+                  <CvGenerator onGenerated={handleCvGenerated} />
+                </TabsContent>
+              </Tabs>
             ) : selectedCvId ? (
               <CvAnalyzer 
                 cvUploadId={selectedCvId}
