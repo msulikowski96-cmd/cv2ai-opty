@@ -13,7 +13,7 @@ if (!process.env.STRIPE_SECRET_KEY) {
 }
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
-  apiVersion: "2023-10-16",
+  apiVersion: "2025-07-30.basil",
 });
 
 // Configure multer for file uploads
@@ -242,9 +242,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       if (user.stripeSubscriptionId) {
         const subscription = await stripe.subscriptions.retrieve(user.stripeSubscriptionId);
+        const invoice = subscription.latest_invoice as Stripe.Invoice;
         return res.json({
           subscriptionId: subscription.id,
-          clientSecret: subscription.latest_invoice?.payment_intent?.client_secret,
+          clientSecret: invoice?.payment_intent ? (invoice.payment_intent as Stripe.PaymentIntent).client_secret : null,
         });
       }
       
@@ -268,7 +269,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         items: [{
           price_data: {
             currency: 'pln',
-            product_data: {
+            product: {
               name: 'CV Optimizer Premium'
             },
             unit_amount: 2999, // 29.99 PLN
@@ -284,17 +285,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await storage.updateUserStripeInfo(userId, customerId, subscription.id);
 
       // Create payment record
+      const invoice = subscription.latest_invoice as Stripe.Invoice;
+      const paymentIntentId = invoice?.payment_intent ? (invoice.payment_intent as Stripe.PaymentIntent).id : '';
+      
       await storage.createPayment({
         userId,
-        stripePaymentId: subscription.latest_invoice?.payment_intent?.id || '',
+        stripePaymentId: paymentIntentId,
         amount: "29.99",
         planType: 'premium',
         status: 'pending'
       });
   
+      const clientSecret = invoice?.payment_intent ? (invoice.payment_intent as Stripe.PaymentIntent).client_secret : null;
+      
       res.json({
         subscriptionId: subscription.id,
-        clientSecret: subscription.latest_invoice?.payment_intent?.client_secret,
+        clientSecret: clientSecret,
       });
     } catch (error: any) {
       console.error('Subscription error:', error);
