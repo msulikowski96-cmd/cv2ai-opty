@@ -5,7 +5,19 @@ import multer from "multer";
 import passport from "passport";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./emailAuth";
-import { optimizeCv, generateRecruiterFeedback, generateCoverLetter, atsOptimizationCheck, generateInterviewQuestions, generateNewCv } from "./services/openrouter";
+import { 
+  optimizeCv, 
+  generateRecruiterFeedback, 
+  generateCoverLetter, 
+  atsOptimizationCheck, 
+  generateInterviewQuestions,
+  generateGrammarCheck,
+  analyzeJobUrl,
+  generateNewCv,
+  generateOptimizedCv,
+  analyzePolishJobPosting,
+  analyzeCvScore
+} from './services/openrouter.js';
 import { extractTextFromPdf } from "./services/pdf-processor";
 import { rateLimiter } from "./middleware/rate-limiter";
 
@@ -72,7 +84,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Developer login route
   app.post('/api/dev-login', async (req, res) => {
     const { username, password } = req.body;
-    
+
     if (username === 'developer' && password === 'NewDev2024!') {
       req.session.isDeveloper = true;
       res.json({ 
@@ -118,7 +130,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Create user
       const user = await storage.createUserWithPassword(email, password, firstName, lastName);
-      
+
       // Create usage stats for new user
       await storage.getOrCreateUsageStats(user.id);
 
@@ -144,7 +156,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (err) {
         return res.status(500).json({ message: 'Błąd serwera' });
       }
-      
+
       if (!user) {
         return res.status(401).json({ message: info?.message || 'Nieprawidłowe dane logowania' });
       }
@@ -153,7 +165,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (err) {
           return res.status(500).json({ message: 'Błąd logowania' });
         }
-        
+
         res.json({ 
           success: true, 
           message: 'Zalogowano pomyślnie',
@@ -200,7 +212,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       let extractedText: string;
-      
+
       if (file.mimetype === 'application/pdf') {
         extractedText = await extractTextFromPdf(file.buffer);
       } else {
@@ -231,9 +243,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userId = req.user.claims.sub;
       const { cvUploadId, analysisType, jobDescription } = req.body;
-      
+
       console.log(`CV analysis request - User: ${userId}, Type: ${analysisType}, CV: ${cvUploadId}`);
-      
+
       const user = await storage.getUser(userId);
       if (!user) {
         return res.status(401).json({ message: 'User not found' });
@@ -242,14 +254,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Check user permissions
       const hasBasic = user.basicPurchased;
       const hasPremium = user.premiumUntil && new Date() < user.premiumUntil;
-      
+
       const basicFeatures = ['optimize_cv', 'ats_optimization_check', 'grammar_check'];
       const premiumFeatures = ['recruiter_feedback', 'cover_letter', 'interview_questions'];
-      
+
       if (!hasBasic && !hasPremium && basicFeatures.includes(analysisType)) {
         return res.status(403).json({ message: 'Basic plan required for this feature' });
       }
-      
+
       if (!hasPremium && premiumFeatures.includes(analysisType)) {
         return res.status(403).json({ message: 'Premium plan required for this feature' });
       }
@@ -260,7 +272,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       let result: string;
-      
+
       try {
         switch (analysisType) {
           case 'optimize_cv':
@@ -290,16 +302,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
           default:
             return res.status(400).json({ message: 'Invalid analysis type' });
         }
-        
+
         console.log(`AI analysis completed successfully for ${analysisType}`);
-        
+
       } catch (aiError) {
         console.error('AI analysis failed:', aiError);
-        
+
         // If it's an API error, return a user-friendly message but still create a result
         if (aiError.message.includes('OpenRouter API')) {
           result = `Przepraszamy, analiza AI jest tymczasowo niedostępna.
-          
+
 Twoje CV zostało przesłane pomyślnie. Spróbuj ponownie za chwilę.
 
 W przypadku dalszych problemów, skontaktuj się z administratorem.`;
@@ -316,7 +328,7 @@ W przypadku dalszych problemów, skontaktuj się z administratorem.`;
 
       console.log(`Analysis result saved with ID: ${analysisResult.id}`);
       res.json({ success: true, result, analysisId: analysisResult.id });
-      
+
     } catch (error) {
       console.error('CV analysis error:', error);
       res.status(500).json({ 
@@ -343,12 +355,12 @@ W przypadku dalszych problemów, skontaktuj się z administratorem.`;
     try {
       const userId = req.user.claims.sub;
       const { cvUploadId } = req.params;
-      
+
       const cvUpload = await storage.getCvUpload(cvUploadId);
       if (!cvUpload || cvUpload.userId !== userId) {
         return res.status(404).json({ message: 'CV not found' });
       }
-      
+
       const results = await storage.getAnalysisResultsByCv(cvUploadId);
       res.json(results);
     } catch (error) {
@@ -369,7 +381,53 @@ W przypadku dalszych problemów, skontaktuj się z administratorem.`;
     }
   });
 
-  // Generate new CV using Qwen 72B
+  // Generate optimized CV endpoint
+  app.post('/api/generate-optimized-cv', isAuthenticatedOrDeveloper, rateLimiter, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { cvUploadId, jobTitle, jobDescription } = req.body;
+
+      if (!cvUploadId || !jobTitle) {
+        return res.status(400).json({ error: 'CV upload ID and job title are required' });
+      }
+
+      // Get original CV
+      const cvUpload = await storage.getCvUpload(cvUploadId);
+      if (!cvUpload || cvUpload.userId !== userId) {
+        return res.status(404).json({ error: 'CV not found' });
+      }
+
+      // Check rate limits
+      const rateLimitResult = await rateLimiter.checkRateLimit(userId);
+      if (!rateLimitResult.allowed) {
+        return res.status(429).json({ 
+          error: 'Rate limit exceeded',
+          resetTime: rateLimitResult.resetTime 
+        });
+      }
+
+      // Generate optimized CV
+      const result = await generateOptimizedCv(
+        cvUpload.originalText,
+        jobTitle,
+        jobDescription || ''
+      );
+
+      // Update usage stats
+      await storage.incrementUsageStat(userId, 'optimizedCvs');
+
+      res.json({ 
+        result,
+        message: 'CV optimized successfully' 
+      });
+
+    } catch (error) {
+      console.error('CV optimization error:', error);
+      res.status(500).json({ error: 'CV optimization failed' });
+    }
+  });
+
+  // Generate new CV endpoint
   app.post('/api/generate-new-cv', isAuthenticatedOrDeveloper, rateLimiter, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
@@ -441,11 +499,11 @@ W przypadku dalszych problemów, skontaktuj się z administratorem.`;
   });
 
   // Stripe subscription route for Premium plan
-  app.post('/api/create-subscription', isAuthenticatedOrDeveloper, async (req: any, res) => {
+  app.post('/api/create-subscription', isAuthenticatedOrDeveloper, async (req, res) => {
     try {
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
-      
+
       if (!user) {
         return res.status(401).json({ message: 'User not found' });
       }
@@ -458,13 +516,13 @@ W przypadku dalszych problemów, skontaktuj się z administratorem.`;
           clientSecret: invoice?.payment_intent ? (invoice.payment_intent as Stripe.PaymentIntent).client_secret : null,
         });
       }
-      
+
       if (!user.email) {
         return res.status(400).json({ message: 'No user email on file' });
       }
 
       let customerId = user.stripeCustomerId;
-      
+
       if (!customerId) {
         const customer = await stripe.customers.create({
           email: user.email,
@@ -497,7 +555,7 @@ W przypadku dalszych problemów, skontaktuj się z administratorem.`;
       // Create payment record
       const invoice = subscription.latest_invoice as Stripe.Invoice;
       const paymentIntentId = invoice?.payment_intent ? (invoice.payment_intent as Stripe.PaymentIntent).id : '';
-      
+
       await storage.createPayment({
         userId,
         stripePaymentId: paymentIntentId,
@@ -505,9 +563,9 @@ W przypadku dalszych problemów, skontaktuj się z administratorem.`;
         planType: 'premium',
         status: 'pending'
       });
-  
+
       const clientSecret = invoice?.payment_intent ? (invoice.payment_intent as Stripe.PaymentIntent).client_secret : null;
-      
+
       res.json({
         subscriptionId: subscription.id,
         clientSecret: clientSecret,
@@ -536,24 +594,24 @@ W przypadku dalszych problemów, skontaktuj się z administratorem.`;
         const paymentIntent = event.data.object;
         const userId = paymentIntent.metadata.userId;
         const planType = paymentIntent.metadata.planType;
-        
+
         if (planType === 'basic') {
           await storage.updateUserBasic(userId);
         }
         break;
-        
+
       case 'invoice.payment_succeeded':
         const invoice = event.data.object;
         const subscriptionId = invoice.subscription;
-        
+
         // Update premium until date (1 month from now)
         const premiumUntil = new Date();
         premiumUntil.setMonth(premiumUntil.getMonth() + 1);
-        
+
         // Find user by subscription ID and update premium status
         // You'd need to add a method to find user by subscription ID
         break;
-        
+
       default:
         console.log(`Unhandled event type ${event.type}`);
     }

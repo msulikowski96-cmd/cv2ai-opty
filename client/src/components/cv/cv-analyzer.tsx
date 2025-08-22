@@ -33,6 +33,14 @@ export default function CvAnalyzer({ cvUploadId, onBack, userPlan }: CvAnalyzerP
 
   const analysisFeatures: AnalysisFeature[] = [
     {
+      id: 'generate_optimized_cv',
+      name: 'Generate Optimized CV',
+      description: 'Tworzy całkowicie nowe, zoptymalizowane CV na podstawie Twojego oryginalnego CV i wymagań stanowiska',
+      icon: Sparkles,
+      requiredPlan: 'basic',
+      color: 'text-purple-500'
+    },
+    {
       id: 'optimize_cv',
       name: 'CV Optimization',
       description: 'AI-powered optimization of your CV content for better impact',
@@ -84,12 +92,26 @@ export default function CvAnalyzer({ cvUploadId, onBack, userPlan }: CvAnalyzerP
 
   const analysisMutation = useMutation({
     mutationFn: async ({ analysisType, jobDesc }: { analysisType: string; jobDesc: string }) => {
-      const response = await apiRequest('POST', '/api/analyze-cv', {
-        cvUploadId,
-        analysisType,
-        jobDescription: jobDesc
-      });
-      return response.json();
+      if (analysisType === 'generate_optimized_cv') {
+        // Parse job description to extract job title
+        const jobTitleMatch = jobDesc.match(/(?:stanowisko|pozycja|rola):\s*([^\n]+)/i) || 
+                              jobDesc.match(/^([^\n]+)/);
+        const jobTitle = jobTitleMatch ? jobTitleMatch[1].trim() : 'Nie podano stanowiska';
+        
+        const response = await apiRequest('POST', '/api/generate-optimized-cv', {
+          cvUploadId,
+          jobTitle,
+          jobDescription: jobDesc
+        });
+        return response.json();
+      } else {
+        const response = await apiRequest('POST', '/api/analyze-cv', {
+          cvUploadId,
+          analysisType,
+          jobDescription: jobDesc
+        });
+        return response.json();
+      }
     },
     onSuccess: (data, variables) => {
       setResults(prev => ({
@@ -113,6 +135,16 @@ export default function CvAnalyzer({ cvUploadId, onBack, userPlan }: CvAnalyzerP
 
   const handleAnalysis = (analysisType: string) => {
     if (canUseFeature(analysisType)) {
+      // For generate_optimized_cv, require job description
+      if (analysisType === 'generate_optimized_cv' && !jobDescription.trim()) {
+        toast({
+          title: "Opis stanowiska wymagany",
+          description: "Aby wygenerować zoptymalizowane CV, wklej opis stanowiska powyżej.",
+          variant: "destructive",
+        });
+        return;
+      }
+      
       setSelectedAnalysis(analysisType);
       analysisMutation.mutate({ analysisType, jobDesc: jobDescription });
     }
@@ -275,12 +307,40 @@ export default function CvAnalyzer({ cvUploadId, onBack, userPlan }: CvAnalyzerP
 
                 return (
                   <div key={analysisType} className="space-y-3">
-                    <div className="flex items-center space-x-2">
-                      <feature.icon className={`w-5 h-5 ${feature.color}`} />
-                      <h4 className="font-semibold">{feature.name}</h4>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-2">
+                        <feature.icon className={`w-5 h-5 ${feature.color}`} />
+                        <h4 className="font-semibold">{feature.name}</h4>
+                      </div>
+                      {analysisType === 'generate_optimized_cv' && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            navigator.clipboard.writeText(result);
+                            toast({
+                              title: "Skopiowano!",
+                              description: "Zoptymalizowane CV zostało skopiowane do schowka.",
+                            });
+                          }}
+                        >
+                          Kopiuj CV
+                        </Button>
+                      )}
                     </div>
                     <div className="p-4 bg-muted/50 rounded-lg">
-                      <pre className="whitespace-pre-wrap text-sm">{result}</pre>
+                      {analysisType === 'generate_optimized_cv' ? (
+                        <div className="space-y-2">
+                          <p className="text-sm font-medium text-green-600 mb-3">
+                            ✅ Nowe CV zostało wygenerowane na podstawie faktów z Twojego oryginalnego CV
+                          </p>
+                          <pre className="whitespace-pre-wrap text-sm font-mono bg-white dark:bg-gray-800 p-3 rounded border max-h-96 overflow-y-auto">
+                            {result}
+                          </pre>
+                        </div>
+                      ) : (
+                        <pre className="whitespace-pre-wrap text-sm">{result}</pre>
+                      )}
                     </div>
                   </div>
                 );

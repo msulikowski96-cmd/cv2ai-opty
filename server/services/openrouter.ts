@@ -791,6 +791,137 @@ Odpowiedź w języku polskim.
   );
 }
 
+export async function generateOptimizedCv(
+  originalCvText: string,
+  jobTitle: string,
+  jobDescription: string,
+  language = 'pl'
+): Promise<string> {
+  const systemPrompt = getEnhancedSystemPrompt('cv_optimization', language) + "\n" + 
+    LANGUAGE_PROMPTS[language] || LANGUAGE_PROMPTS['pl'];
+  
+  // Truncate CV text if too long
+  const maxCvLength = 15000; // characters
+  let processedCvText = originalCvText;
+  
+  if (originalCvText.length > maxCvLength) {
+    const halfLength = Math.floor(maxCvLength / 2);
+    const beginning = originalCvText.substring(0, halfLength);
+    const ending = originalCvText.substring(originalCvText.length - halfLength);
+    processedCvText = beginning + "\n\n[...CZĘŚĆ ŚRODKOWA POMINIĘTA...]\n\n" + ending;
+  }
+  
+  const prompt = `
+ZADANIE: Stwórz całkowicie NOWE, zoptymalizowane CV na podstawie oryginalnego CV i wymagań stanowiska, używając WYŁĄCZNIE faktów z oryginalnego CV.
+
+🚨 ABSOLUTNY ZAKAZ FAŁSZOWANIA DANYCH:
+- NIE WOLNO dodawać firm, stanowisk, dat, które nie są w oryginalnym CV
+- NIE WOLNO wymyślać osiągnięć, projektów, umiejętności
+- NIE WOLNO zmieniać faktów z CV kandydata
+- MOŻNA reorganizować informacje dla lepszej prezentacji
+- MOŻNA lepiej sformułować istniejące prawdziwe informacje
+- MOŻNA dostosować akcenty do wymagań stanowiska
+- Każda wymyślona informacja niszczy wiarygodność kandydata
+
+🎯 STANOWISKO DOCELOWE: ${jobTitle}
+
+📋 WYMAGANIA STANOWISKA:
+${jobDescription}
+
+📄 ORYGINALNE CV (ŹRÓDŁO WSZYSTKICH FAKTÓW):
+${processedCvText}
+
+💼 METODA GENEROWANIA ZOPTYMALIZOWANEGO CV:
+
+1. **ANALIZA DOPASOWANIA:**
+   - Przeanalizuj wymagania stanowiska
+   - Zidentyfikuj które fakty z oryginalnego CV najlepiej pasują
+   - Znajdź słowa kluczowe potrzebne do optymalizacji
+
+2. **REORGANIZACJA STRUKTURY:**
+   - Ułóż sekcje CV w kolejności priorytetów dla tego stanowiska
+   - Wyeksponuj najważniejsze doświadczenia na początku
+   - Dostosuj nagłówki sekcji do branżowych standardów
+
+3. **OPTYMALIZACJA TREŚCI:**
+   - Przepisz opisy stanowisk używając terminologii z ogłoszenia
+   - Podkreśl osiągnięcia i umiejętności relevantne dla roli
+   - Użyj czasowników akcji i konkretnych przykładów Z ORYGINALNEGO CV
+   - Dodaj słowa kluczowe w naturalny sposób
+
+4. **DOSTOSOWANIE DO ATS:**
+   - Użyj standardowych nagłówków sekcji
+   - Zachowaj czytelną strukturę
+   - Uwzględnij słowa kluczowe z opisu stanowiska
+
+WYGENERUJ KOMPLETNE, NOWE CV ZAWIERAJĄCE:
+
+**[DANE OSOBOWE]**
+- Użyj dokładnie danych z oryginalnego CV
+- Dodaj profesjonalny profil LinkedIn jeśli był w oryginale
+
+**[PROFIL ZAWODOWY]**
+- 3-4 zdania podsumowujące kandydata
+- Podkreśl doświadczenie relevantne dla stanowiska
+- Użyj słów kluczowych z opisu pracy
+- Bazuj TYLKO na faktach z oryginalnego CV
+
+**[KLUCZOWE UMIEJĘTNOŚCI]**
+- Wyselekcjonuj najważniejsze umiejętności z oryginalnego CV
+- Uporządkuj według ważności dla stanowiska
+- Użyj terminologii z branży
+- NIE dodawaj umiejętności których nie ma w oryginale
+
+**[DOŚWIADCZENIE ZAWODOWE]**
+- Zachowaj WSZYSTKIE firmy, stanowiska i daty z oryginału
+- Przepisz opisy zadań akcent na wymagania stanowiska
+- Wyeksponuj osiągnięcia pasujące do roli
+- Użyj czasowników akcji i mierzalnych rezultatów z oryginału
+- Reorganizuj kolejność jeśli pomaga to w prezentacji
+
+**[WYKSZTAŁCENIE]**
+- Przepisz informacje z oryginalnego CV
+- Podkreśl elementy relevantne dla stanowiska
+- Zachowaj wszystkie nazwy uczelni, kierunki, daty
+
+**[DODATKOWE SEKCJE]**
+- Przepisz sekcje z oryginalnego CV jeśli są relevantne
+- Certyfikaty, języki, projekty - tylko te z oryginału
+- Dostosuj prezentację do wymagań stanowiska
+
+⚠️ KRYTYCZNE ZASADY - MUSZĄ BYĆ PRZESTRZEGANE:
+1. Każda informacja MUSI pochodzić z oryginalnego CV
+2. Żadne nowe firmy, stanowiska, daty nie mogą być dodane
+3. Żadne nowe umiejętności, certyfikaty, projekty nie mogą być wymyślone
+4. Można tylko lepiej prezentować istniejące fakty
+5. Można reorganizować strukturę dla lepszego dopasowania
+6. Można użyć synonimów i lepszej terminologii branżowej
+
+🔍 KOŃCOWA WERYFIKACJA:
+Przed zwróceniem sprawdź:
+- Czy wszystkie firmy są z oryginału? ✓
+- Czy wszystkie stanowiska są z oryginału? ✓
+- Czy wszystkie daty są z oryginału? ✓
+- Czy wszystkie umiejętności są z oryginału? ✓
+- Czy nie wymyśliłem żadnych projektów/osiągnięć? ✓
+
+ZWRÓĆ TYLKO KOMPLETNY TEKST ZOPTYMALIZOWANEGO CV.
+Nie dodawaj JSON, metadanych ani komentarzy.
+Stwórz profesjonalne CV gotowe do wysłania pracodawcy.
+  `;
+
+  return callOpenRouterAPI(
+    prompt, 
+    systemPrompt, 
+    4000, 
+    DEFAULT_MODEL, 
+    'free', 
+    'cv_optimization', 
+    'general', 
+    language
+  );
+}
+
 export async function generateNewCv(
   personalInfo: {
     name?: string;
