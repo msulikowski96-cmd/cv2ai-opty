@@ -278,15 +278,41 @@ export async function optimizeCv(
   }
   
   const prompt = `
-ZADANIE: Przeppisz to CV używając WYŁĄCZNIE faktów z oryginalnego tekstu. NIE DODAWAJ, NIE WYMYŚLAJ, NIE TWÓRZ nowych informacji.
+ZADANIE: Przepisz to CV używając WYŁĄCZNIE faktów z oryginalnego tekstu. NIE DODAWAJ, NIE WYMYŚLAJ, NIE TWÓRZ nowych informacji.
+
+🚨 ABSOLUTNY ZAKAZ FAŁSZOWANIA DANYCH:
+- NIE WOLNO dodawać firm, stanowisk, dat, które nie są w oryginalnym CV
+- NIE WOLNO wymyślać osiągnięć, projektów, umiejętności
+- NIE WOLNO zmieniać faktów z CV kandydata
+- MOŻNA TYLKO lepiej sformułować istniejące prawdziwe informacje
+- Każda wymyślona informacja niszczy wiarygodność kandydata
 
 ⚠️ KRYTYCZNE ZASADY - MUSZĄ BYĆ BEZWZGLĘDNIE PRZESTRZEGANE:
 1. ❌ ABSOLUTNY ZAKAZ: NIE wolno dodawać żadnych nowych firm, stanowisk, dat, osiągnięć, umiejętności
 2. ❌ ABSOLUTNY ZAKAZ: NIE wolno zmieniać dat zatrudnienia, nazw firm, tytułów stanowisk
 3. ❌ ABSOLUTNY ZAKAZ: NIE wolno dodawać obowiązków które nie są w oryginalnym CV
-4. ✅ DOZWOLONE: Tylko lepsze sformułowanie istniejących opisów używając lepszych słów
-5. ✅ DOZWOLONE: Reorganizacja kolejności sekcji dla lepszej prezentacji
-6. ✅ DOZWOLONE: Użycie synonimów i lepszej terminologii branżowej
+4. ❌ ABSOLUTNY ZAKAZ: NIE wolno wymyślać projektów, klientów, rezultatów
+5. ❌ ABSOLUTNY ZAKAZ: NIE wolno dodawać certyfikatów, kursów, szkoleń których nie ma
+6. ❌ ABSOLUTNY ZAKAZ: NIE wolno zmieniać poziomu wykształcenia ani nazw uczelni
+7. ✅ DOZWOLONE: Tylko lepsze sformułowanie istniejących opisów używając lepszych słów
+8. ✅ DOZWOLONE: Reorganizacja kolejności sekcji dla lepszej prezentacji
+9. ✅ DOZWOLONE: Użycie synonimów i lepszej terminologii branżowej
+10. ✅ DOZWOLONE: Poprawa gramatyki i stylu bez zmiany treści
+
+💼 METODA OPTYMALIZACJI:
+1. Przeprowadź głęboką analizę każdego elementu CV
+2. Myśl jak doświadczony rekruter - co zwraca uwagę, co denerwuje
+3. Stosuj zasady psychologii przekonywania w pisaniu CV
+4. Używaj konkretnych, mierzalnych sformułowań z oryginalnego CV
+5. Dostosowuj język do branży i poziomu stanowiska
+6. Zachowaj wszystkie oryginalne fakty i daty
+7. Popraw tylko sposób prezentacji istniejących informacji
+
+🔍 WERYFIKACJA AUTENTYCZNOŚCI:
+- Każda informacja MUSI pochodzić z oryginalnego CV
+- Sprawdź czy nie dodałeś żadnych nowych elementów
+- Upewnij się że wszystkie daty, firmy, stanowiska są identyczne
+- Potwierdź że nie wymyśliłeś żadnych osiągnięć
 
 STANOWISKO DOCELOWE: ${jobDescription || 'Ogólne CV profesjonalne'}
 
@@ -297,33 +323,50 @@ STRUKTURA ZOPTYMALIZOWANEGO CV:
 
 [DANE OSOBOWE]
 - Zachowaj dokładnie dane kontaktowe z oryginalnego CV
+- Nie zmieniaj ani nie dodawaj żadnych informacji kontaktowych
 
 [PODSUMOWANIE ZAWODOWE] 
-- Stwórz zwięzłe podsumowanie na podstawie doświadczenia z CV
-- 2-3 zdania o kluczowych umiejętnościach i doświadczeniu
-- Użyj tylko faktów z oryginalnego CV
+- Stwórz zwięzłe podsumowanie NA PODSTAWIE doświadczenia z oryginalnego CV
+- 2-3 zdania o kluczowych umiejętnościach FAKTYCZNIE wymienionych w CV
+- Użyj TYLKO informacji z oryginalnego CV
+- Nie dodawaj umiejętności których nie ma w oryginale
 
 [DOŚWIADCZENIE ZAWODOWE]
-- Zachowaj wszystkie firmy, stanowiska i daty z oryginału
+- Zachowaj WSZYSTKIE firmy, stanowiska i daty DOKŁADNIE z oryginału
 - Przepisz opisy obowiązków używając lepszych czasowników akcji
-- Każde stanowisko: 3-4 punkty z konkretnymi obowiązkami
-- Różnicuj opisy podobnych stanowisk
+- Każde stanowisko: tylko obowiązki które SĄ w oryginalnym CV
+- Różnicuj opisy podobnych stanowisk ale bez dodawania nowych zadań
+- Nie dodawaj projektów, klientów, rezultatów których nie ma w oryginale
 
 [WYKSZTAŁCENIE]
-- Przepisz dokładnie informacje z oryginalnego CV
-- Nie dodawaj kursów których nie ma w oryginale
+- Przepisz DOKŁADNIE informacje z oryginalnego CV
+- Nie dodawaj kursów, certyfikatów, szkoleń których nie ma w oryginale
+- Zachowaj nazwy uczelni, kierunki studiów, daty bez zmian
 
 [UMIEJĘTNOŚCI]
-- Użyj tylko umiejętności wymienione w oryginalnym CV
+- Użyj TYLKO umiejętności wymienione w oryginalnym CV
 - Pogrupuj je logicznie (Techniczne, Komunikacyjne, itp.)
+- Nie dodawaj nowych technologii, języków, narzędzi
 
-PRZEPISZ CV zachowując wszystkie oryginalne fakty, ale lepiej je prezentując.
+[DODATKOWE SEKCJE]
+- Przepisz TYLKO sekcje które są w oryginalnym CV
+- Nie dodawaj nowych sekcji (hobby, zainteresowania, etc.) jeśli ich nie ma
 
-PAMIĘTAJ: Jeśli dodasz choćby jeden wymyślony szczegół, naruszysz zaufanie kandydata!
+⚠️ KOŃCOWA WERYFIKACJA:
+Przed zwróceniem odpowiedzi sprawdź:
+- Czy wszystkie firmy są z oryginału?
+- Czy wszystkie stanowiska są z oryginału? 
+- Czy wszystkie daty są z oryginału?
+- Czy wszystkie umiejętności są z oryginału?
+- Czy nie dodałeś żadnych nowych projektów, osiągnięć, certyfikatów?
+
+PRZEPISZ CV zachowując WSZYSTKIE oryginalne fakty, ale lepiej je prezentując.
+
+PAMIĘTAJ: Jeśli dodasz choćby jeden wymyślony szczegół, naruszysz zaufanie kandydata i program będzie uznany za nieetyczny!
 
 ZWRÓĆ TYLKO KOMPLETNY TEKST ZOPTYMALIZOWANEGO CV - nic więcej.
 Nie dodawaj JSON, metadanych ani komentarzy.
-Po prostu wygeneruj gotowe CV do użycia.
+Po prostu wygeneruj gotowe CV do użycia używając TYLKO faktów z oryginału.
   `;
 
   return callOpenRouterAPI(
@@ -766,41 +809,92 @@ export async function generateNewCv(
     LANGUAGE_PROMPTS[language] || LANGUAGE_PROMPTS['pl'];
   
   const prompt = `
-ZADANIE: Wygeneruj kompletną treść CV na podstawie minimalnych informacji od użytkownika.
+ZADANIE: Wygeneruj kompletną treść CV na podstawie informacji podanych przez użytkownika.
 
-DANE WEJŚCIOWE:
+🚨 ABSOLUTNY ZAKAZ FAŁSZOWANIA DANYCH:
+- Używaj TYLKO informacji podanych przez użytkownika
+- NIE WOLNO wymyślać firm, stanowisk, dat
+- NIE WOLNO dodawać osiągnięć, projektów, umiejętności których użytkownik nie podał
+- MOŻNA uzupełnić opisy obowiązków dla podanych stanowisk
+- MOŻNA dodać formatowanie i strukturę
+- Każda wymyślona informacja niszczy wiarygodność kandydata
+
+💼 METODA PRACY:
+1. Analizuj informacje podane przez użytkownika
+2. Strukturyzuj je w profesjonalny sposób
+3. Rozwiń opisy obowiązków dla podanych stanowisk
+4. Użyj właściwej terminologii branżowej
+5. Zachowaj wszystkie podane fakty bez zmian
+6. Nie dodawaj informacji których nie ma w danych wejściowych
+
+DANE WEJŚCIOWE OD UŻYTKOWNIKA:
 ${personalInfo.name ? `Imię i nazwisko: ${personalInfo.name}` : ''}
 ${personalInfo.email ? `Email: ${personalInfo.email}` : ''}
 ${personalInfo.phone ? `Telefon: ${personalInfo.phone}` : ''}
 ${personalInfo.location ? `Lokalizacja: ${personalInfo.location}` : ''}
 ${personalInfo.profession ? `Zawód/Specjalizacja: ${personalInfo.profession}` : ''}
 
-${experience ? `DOŚWIADCZENIE ZAWODOWE:\n${experience}` : ''}
+${experience ? `DOŚWIADCZENIE ZAWODOWE PODANE PRZEZ UŻYTKOWNIKA:\n${experience}` : ''}
 
-${education ? `WYKSZTAŁCENIE:\n${education}` : ''}
+${education ? `WYKSZTAŁCENIE PODANE PRZEZ UŻYTKOWNIKA:\n${education}` : ''}
 
-${skills ? `UMIEJĘTNOŚCI:\n${skills}` : ''}
+${skills ? `UMIEJĘTNOŚCI PODANE PRZEZ UŻYTKOWNIKA:\n${skills}` : ''}
 
 ${jobDescription ? `DOCELOWE STANOWISKO:\n${jobDescription}` : ''}
 
-Utwórz kompletne, profesjonalne CV zawierające:
+WYGENERUJ CV ZAWIERAJĄCE:
 
-1. **Dane kontaktowe** - czytelnie sformatowane
-2. **Profil zawodowy** - krótki, atrakcyjny opis (2-3 zdania)
-3. **Doświadczenie zawodowe** - z datami, nazwami firm, stanowiskami i opisami obowiązków
-4. **Wykształcenie** - z datami, nazwami uczelni/szkół i kierunkami
-5. **Umiejętności** - podzielone na kategorie (techniczne, językowe, miękkie)
-6. **Dodatkowe sekcje** - jeśli relevant (certyfikaty, języki, zainteresowania)
+1. **DANE OSOBOWE**
+- Użyj dokładnie podanych danych kontaktowych
+- Nie dodawaj informacji których nie podano
 
-Wymagania:
+2. **PROFIL ZAWODOWY** 
+- Stwórz zwięzły opis (2-3 zdania) NA PODSTAWIE podanych informacji
+- Użyj tylko umiejętności i doświadczenia które zostały podane
+- Dostosuj do docelowego stanowiska
+
+3. **DOŚWIADCZENIE ZAWODOWE**
+- Użyj TYLKO stanowisk i firm podanych przez użytkownika
+- Jeśli podano szczegółowe doświadczenie, użyj go dokładnie
+- Możesz rozwinąć opisy obowiązków dla podanych stanowisk
+- NIE dodawaj nowych firm ani stanowisk
+
+4. **WYKSZTAŁCENIE**
+- Użyj TYLKO informacji o wykształceniu podanych przez użytkownika
+- Nie dodawaj kursów, certyfikatów których nie podano
+
+5. **UMIEJĘTNOŚCI**
+- Użyj TYLKO umiejętności podane przez użytkownika
+- Pogrupuj je logicznie
+- Nie dodawaj nowych technologii ani umiejętności
+
+6. **DODATKOWE SEKCJE**
+- Dodaj tylko jeśli użytkownik podał odpowiednie informacje
+- Nie wymyślaj zainteresowań, certyfikatów, projektów
+
+⚠️ ZASADY GENEROWANIA:
+- Jeśli użytkownik podał minimalne informacje, stwórz podstawowe CV
+- Jeśli nie podał doświadczenia, nie wymyślaj firm ani stanowisk
+- Jeśli nie podał umiejętności, nie dodawaj żadnych
+- Lepiej mieć krótkie ale prawdziwe CV niż długie z wymyślonymi danymi
+
+WYMAGANIA FORMATOWANIA:
 - Nowoczesny, czytelny format
-- Profesjonalny język biznesowy
+- Profesjonalny język biznesowy polski
 - Dostosowanie do polskiego rynku pracy
-- Konkretne opisy osiągnięć i obowiązków
 - Optymalizacja pod systemy ATS
-- Format gotowy do użycia
+- Spójne formatowanie dat i informacji
 
-Jeśli brakuje informacji, uzupełnij je profesjonalnymi przykładami odpowiednimi dla danej branży.
+⚠️ KOŃCOWA WERYFIKACJA:
+Przed zwróceniem sprawdź:
+- Czy używasz tylko informacji podanych przez użytkownika?
+- Czy nie dodałeś żadnych wymyślonych firm, stanowisk, dat?
+- Czy wszystkie umiejętności pochodzą od użytkownika?
+- Czy nie wymyśliłeś projektów ani osiągnięć?
+
+ZWRÓĆ TYLKO KOMPLETNY TEKST CV - nic więcej.
+Nie dodawaj JSON, metadanych ani komentarzy.
+Wygeneruj gotowe CV używając TYLKO informacji od użytkownika.
   `;
 
   return callOpenRouterAPI(
