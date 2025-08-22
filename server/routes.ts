@@ -232,6 +232,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.user.claims.sub;
       const { cvUploadId, analysisType, jobDescription } = req.body;
       
+      console.log(`CV analysis request - User: ${userId}, Type: ${analysisType}, CV: ${cvUploadId}`);
+      
       const user = await storage.getUser(userId);
       if (!user) {
         return res.status(401).json({ message: 'User not found' });
@@ -259,28 +261,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       let result: string;
       
-      switch (analysisType) {
-        case 'optimize_cv':
-          result = await optimizeCv(cvUpload.originalText, jobDescription);
-          await storage.incrementUsageStat(userId, 'optimizedCvs');
-          break;
-        case 'ats_optimization_check':
-          result = await atsOptimizationCheck(cvUpload.originalText, jobDescription);
-          await storage.incrementUsageStat(userId, 'atsChecks');
-          break;
-        case 'recruiter_feedback':
-          result = await generateRecruiterFeedback(cvUpload.originalText, jobDescription);
-          await storage.incrementUsageStat(userId, 'recruiterFeedback');
-          break;
-        case 'cover_letter':
-          result = await generateCoverLetter(cvUpload.originalText, jobDescription);
-          await storage.incrementUsageStat(userId, 'coverLetters');
-          break;
-        case 'interview_questions':
-          result = await generateInterviewQuestions(cvUpload.originalText, jobDescription);
-          break;
-        default:
-          return res.status(400).json({ message: 'Invalid analysis type' });
+      try {
+        switch (analysisType) {
+          case 'optimize_cv':
+            console.log('Starting CV optimization...');
+            result = await optimizeCv(cvUpload.originalText, jobDescription);
+            await storage.incrementUsageStat(userId, 'optimizedCvs');
+            break;
+          case 'ats_optimization_check':
+            console.log('Starting ATS check...');
+            result = await atsOptimizationCheck(cvUpload.originalText, jobDescription);
+            await storage.incrementUsageStat(userId, 'atsChecks');
+            break;
+          case 'recruiter_feedback':
+            console.log('Generating recruiter feedback...');
+            result = await generateRecruiterFeedback(cvUpload.originalText, jobDescription);
+            await storage.incrementUsageStat(userId, 'recruiterFeedback');
+            break;
+          case 'cover_letter':
+            console.log('Generating cover letter...');
+            result = await generateCoverLetter(cvUpload.originalText, jobDescription);
+            await storage.incrementUsageStat(userId, 'coverLetters');
+            break;
+          case 'interview_questions':
+            console.log('Generating interview questions...');
+            result = await generateInterviewQuestions(cvUpload.originalText, jobDescription);
+            break;
+          default:
+            return res.status(400).json({ message: 'Invalid analysis type' });
+        }
+        
+        console.log(`AI analysis completed successfully for ${analysisType}`);
+        
+      } catch (aiError) {
+        console.error('AI analysis failed:', aiError);
+        
+        // If it's an API error, return a user-friendly message but still create a result
+        if (aiError.message.includes('OpenRouter API')) {
+          result = `Przepraszamy, analiza AI jest tymczasowo niedostępna.
+          
+Twoje CV zostało przesłane pomyślnie. Spróbuj ponownie za chwilę.
+
+W przypadku dalszych problemów, skontaktuj się z administratorem.`;
+        } else {
+          throw aiError;
+        }
       }
 
       const analysisResult = await storage.createAnalysisResult({
@@ -289,10 +314,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         resultData: result,
       });
 
+      console.log(`Analysis result saved with ID: ${analysisResult.id}`);
       res.json({ success: true, result, analysisId: analysisResult.id });
+      
     } catch (error) {
       console.error('CV analysis error:', error);
-      res.status(500).json({ message: 'Failed to analyze CV' });
+      res.status(500).json({ 
+        message: 'Failed to analyze CV',
+        error: process.env.NODE_ENV === 'development' ? error.message : undefined
+      });
     }
   });
 

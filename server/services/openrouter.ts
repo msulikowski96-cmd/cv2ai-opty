@@ -41,6 +41,8 @@ async function callOpenRouterAPI(
   };
 
   try {
+    console.log('Making OpenRouter API call with model:', model);
+    
     const response = await fetch(OPENROUTER_API_URL, {
       method: 'POST',
       headers: {
@@ -54,18 +56,41 @@ async function callOpenRouterAPI(
 
     if (!response.ok) {
       const errorData = await response.text();
+      console.error(`OpenRouter API error ${response.status}:`, errorData);
       throw new Error(`OpenRouter API error ${response.status}: ${errorData}`);
     }
 
     const data = await response.json();
+    console.log('OpenRouter API response structure:', Object.keys(data));
     
-    if (!data.choices || !data.choices[0] || !data.choices[0].message) {
-      throw new Error('Invalid response format from OpenRouter API');
+    if (!data.choices || !Array.isArray(data.choices) || data.choices.length === 0) {
+      console.error('Invalid choices in response:', data);
+      throw new Error('No choices returned from OpenRouter API');
+    }
+
+    if (!data.choices[0].message || !data.choices[0].message.content) {
+      console.error('Invalid message structure:', data.choices[0]);
+      throw new Error('Invalid message structure in OpenRouter API response');
     }
 
     return data.choices[0].message.content;
   } catch (error) {
     console.error('OpenRouter API call failed:', error);
+    
+    // Fallback response if API fails
+    if (error.message.includes('OpenRouter API')) {
+      return `Przepraszamy, w tej chwili nie możemy połączyć się z systemem AI. 
+      
+Twoje CV zostało przesłane i zapisane pomyślnie. Możesz spróbować ponownie za chwilę lub skontaktować się z administratorem.
+
+W międzyczasie, oto ogólne wskazówki dotyczące optymalizacji CV:
+- Dostosuj CV do konkretnej oferty pracy
+- Używaj słów kluczowych z opisu stanowiska
+- Podkreśl osiągnięcia liczbami i faktami
+- Zachowaj czytelną strukturę i formatowanie
+- Sprawdź gramatykę i ortografię`;
+    }
+    
     throw error;
   }
 }
