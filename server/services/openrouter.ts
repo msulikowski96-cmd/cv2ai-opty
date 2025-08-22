@@ -23,7 +23,7 @@ async function callOpenRouterAPI(
   prompt: string, 
   systemPrompt?: string,
   maxTokens = 2000, 
-  model = "anthropic/claude-3.5-sonnet"
+  model = "qwen/qwen-2.5-72b-instruct:free"
 ): Promise<string> {
   const messages = [];
   
