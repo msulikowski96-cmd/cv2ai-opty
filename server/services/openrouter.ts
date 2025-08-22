@@ -19,6 +19,31 @@ interface OpenRouterRequest {
   temperature?: number;
 }
 
+// Function to estimate token count (roughly 4 characters per token)
+function estimateTokenCount(text: string): number {
+  return Math.ceil(text.length / 4);
+}
+
+// Function to truncate text to fit within token limits
+function truncateToTokenLimit(text: string, maxTokens: number): string {
+  const estimatedTokens = estimateTokenCount(text);
+  
+  if (estimatedTokens <= maxTokens) {
+    return text;
+  }
+  
+  // Calculate how much text we need to keep (with some buffer)
+  const targetChars = Math.floor(maxTokens * 4 * 0.8); // 80% of limit for safety
+  
+  if (text.length <= targetChars) {
+    return text;
+  }
+  
+  // Truncate and add notice
+  const truncated = text.substring(0, targetChars);
+  return truncated + "\n\n[UWAGA: CV zostało skrócone z powodu długości. Analiza oparta na pierwszej części dokumentu.]";
+}
+
 async function callOpenRouterAPI(
   prompt: string, 
   systemPrompt?: string,
@@ -31,7 +56,15 @@ async function callOpenRouterAPI(
     messages.push({ role: 'system' as const, content: systemPrompt });
   }
   
-  messages.push({ role: 'user' as const, content: prompt });
+  // Calculate available tokens for the user prompt
+  const systemTokens = systemPrompt ? estimateTokenCount(systemPrompt) : 0;
+  const modelContextLimit = 30000; // Safe limit below 32768
+  const availableTokens = modelContextLimit - systemTokens - maxTokens - 500; // Reserve 500 for safety
+  
+  // Truncate prompt if needed
+  const truncatedPrompt = truncateToTokenLimit(prompt, availableTokens);
+  
+  messages.push({ role: 'user' as const, content: truncatedPrompt });
 
   const requestData: OpenRouterRequest = {
     model,
@@ -102,6 +135,18 @@ export async function optimizeCv(
 ): Promise<string> {
   const systemPrompt = `Jesteś ekspertem w optymalizacji CV. Twoja rola to analizowanie i ulepszanie CV tak, aby były bardziej atrakcyjne dla rekruterów i systemów ATS. Odpowiadaj w języku polskim.`;
   
+  // Truncate CV text if too long (keep most important parts)
+  const maxCvLength = 15000; // characters
+  let processedCvText = cvText;
+  
+  if (cvText.length > maxCvLength) {
+    // Try to keep the beginning and end, which usually contain most important info
+    const halfLength = Math.floor(maxCvLength / 2);
+    const beginning = cvText.substring(0, halfLength);
+    const ending = cvText.substring(cvText.length - halfLength);
+    processedCvText = beginning + "\n\n[...CZĘŚĆ ŚRODKOWA POMINIĘTA...]\n\n" + ending;
+  }
+  
   const prompt = `
 Proszę zoptymalizować następujące CV pod kątem tej oferty pracy:
 
@@ -109,7 +154,7 @@ OFEROWANA POZYCJA:
 ${jobDescription || 'Ogólna optymalizacja CV'}
 
 AKTUALNE CV:
-${cvText}
+${processedCvText}
 
 Proszę o:
 1. Analizę zgodności CV z wymaganiami stanowiska
@@ -134,6 +179,17 @@ export async function generateRecruiterFeedback(
 ): Promise<string> {
   const systemPrompt = `Jesteś doświadczonym rekruterem z 10-letnim stażem. Analizujesz CV z perspektywy pracodawcy i dajesz szczere, konstruktywne opinie. Odpowiadaj w języku polskim.`;
   
+  // Truncate CV if too long
+  const maxCvLength = 15000;
+  let processedCvText = cvText;
+  
+  if (cvText.length > maxCvLength) {
+    const halfLength = Math.floor(maxCvLength / 2);
+    const beginning = cvText.substring(0, halfLength);
+    const ending = cvText.substring(cvText.length - halfLength);
+    processedCvText = beginning + "\n\n[...CZĘŚĆ ŚRODKOWA POMINIĘTA...]\n\n" + ending;
+  }
+  
   const prompt = `
 Jako rekruter, proszę o szczegółową opinię na temat tego CV w kontekście następującej pozycji:
 
@@ -141,7 +197,7 @@ POZYCJA:
 ${jobDescription || 'Ogólna ocena CV'}
 
 CV DO OCENY:
-${cvText}
+${processedCvText}
 
 Proszę o opinię obejmującą:
 1. Pierwsze wrażenie (co się podoba, co budzi wątpliwości)
@@ -194,6 +250,17 @@ export async function atsOptimizationCheck(
 ): Promise<string> {
   const systemPrompt = `Jesteś ekspertem w systemach ATS (Applicant Tracking System). Analizujesz CV pod kątem kompatybilności z automatycznymi systemami rekrutacyjnymi. Odpowiadasz w języku polskim.`;
   
+  // Truncate CV if too long
+  const maxCvLength = 15000;
+  let processedCvText = cvText;
+  
+  if (cvText.length > maxCvLength) {
+    const halfLength = Math.floor(maxCvLength / 2);
+    const beginning = cvText.substring(0, halfLength);
+    const ending = cvText.substring(cvText.length - halfLength);
+    processedCvText = beginning + "\n\n[...CZĘŚĆ ŚRODKOWA POMINIĘTA...]\n\n" + ending;
+  }
+  
   const prompt = `
 Przeprowadź analizę ATS dla tego CV w kontekście stanowiska:
 
@@ -201,7 +268,7 @@ STANOWISKO:
 ${jobDescription || 'Ogólna analiza ATS'}
 
 CV:
-${cvText}
+${processedCvText}
 
 Przeanalizuj:
 1. **Zgodność słów kluczowych** - jakie słowa kluczowe z opisu stanowiska występują w CV
