@@ -4,7 +4,7 @@ import Stripe from "stripe";
 import multer from "multer";
 import passport from "passport";
 import { storage } from "./storage";
-import { setupAuth, isAuthenticated } from "./replitAuth";
+import { setupAuth, isAuthenticated } from "./emailAuth";
 import { optimizeCv, generateRecruiterFeedback, generateCoverLetter, atsOptimizationCheck, generateInterviewQuestions, generateNewCv } from "./services/openrouter";
 import { extractTextFromPdf } from "./services/pdf-processor";
 import { rateLimiter } from "./middleware/rate-limiter";
