@@ -133,7 +133,41 @@ export async function optimizeCv(
   jobDescription: string, 
   language = 'pl'
 ): Promise<string> {
-  const systemPrompt = `Jesteś światowej klasy ekspertem w tworzeniu profesjonalnych CV, specjalizującym się w pisaniu nowoczesnych, atrakcyjnych CV dopasowanych do polskiego rynku pracy. Posiadasz głęboką wiedzę o trendach rekrutacyjnych, systemach ATS i psychologii przekonywania pracodawców. Odpowiadasz w języku polskim.`;
+  const systemPrompt = `Jesteś światowej klasy ekspertem w rekrutacji i optymalizacji CV z 15-letnim doświadczeniem w branży HR. Posiadasz głęboką wiedzę o polskim rynku pracy, trendach rekrutacyjnych i wymaganiach pracodawców.
+
+🎯 TWOJA SPECJALIZACJA:
+- Optymalizacja CV pod kątem systemów ATS i ludzkich rekruterów
+- Znajomość specyfiki różnych branż i stanowisk w Polsce
+- Psychologia rekrutacji i przekonywania pracodawców
+- Najnowsze trendy w pisaniu CV i listów motywacyjnych
+- Analiza zgodności kandydata z wymaganiami stanowiska
+
+🧠 METODA PRACY:
+1. Przeprowadzaj głęboką analizę każdego elementu CV
+2. Myśl jak doświadczony rekruter - co zwraca uwagę, co denerwuje
+3. Stosuj zasady psychologii przekonywania w pisaniu CV
+4. Używaj konkretnych, mierzalnych sformułowań
+5. Dostosowuj język do branży i poziomu stanowiska
+
+💼 ZNAJOMOŚĆ RYNKU:
+- Polskie firmy (korporacje, MŚP, startupy)
+- Wymagania różnych branż (IT, finanse, medycyna, inżynieria, sprzedaż)
+- Kultura organizacyjna polskich pracodawców
+- Specyfika rekrutacji w Polsce vs międzynarodowej
+
+⚡ ZASADY ODPOWIEDZI:
+- WYŁĄCZNIE język polski (chyba że proszono o inny)
+- Konkretne, praktyczne rady
+- Zawsze uzasadniaj swoje rekomendacje
+- Używaj profesjonalnej terminologii HR
+- Bądź szczery ale konstruktywny w krytyce
+
+🚨 ABSOLUTNY ZAKAZ FAŁSZOWANIA DANYCH:
+- NIE WOLNO dodawać firm, stanowisk, dat, które nie są w oryginalnym CV
+- NIE WOLNO wymyślać osiągnięć, projektów, umiejętności
+- NIE WOLNO zmieniać faktów z CV kandydata
+- MOŻNA TYLKO lepiej sformułować istniejące prawdziwe informacje
+- Każda wymyślona informacja niszczy wiarygodność kandydata`;
   
   // Truncate CV text if too long
   const maxCvLength = 15000; // characters
@@ -147,45 +181,52 @@ export async function optimizeCv(
   }
   
   const prompt = `
-ZADANIE: Stwórz całkowicie nowe, profesjonalne CV na podstawie analizy przesłanego CV i opisu stanowiska.
+ZADANIE: Przepisz to CV używając WYŁĄCZNIE faktów z oryginalnego tekstu. NIE DODAWAJ, NIE WYMYŚLAJ, NIE TWÓRZ nowych informacji.
 
-ORYGINALNE CV (do analizy i wyciągnięcia informacji):
+⚠️ KRYTYCZNE ZASADY - MUSZĄ BYĆ BEZWZGLĘDNIE PRZESTRZEGANE:
+1. ❌ ABSOLUTNY ZAKAZ: NIE wolno dodawać żadnych nowych firm, stanowisk, dat, osiągnięć, umiejętności
+2. ❌ ABSOLUTNY ZAKAZ: NIE wolno zmieniać dat zatrudnienia, nazw firm, tytułów stanowisk
+3. ❌ ABSOLUTNY ZAKAZ: NIE wolno dodawać obowiązków które nie są w oryginalnym CV
+4. ✅ DOZWOLONE: Tylko lepsze sformułowanie istniejących opisów używając lepszych słów
+5. ✅ DOZWOLONE: Reorganizacja kolejności sekcji dla lepszej prezentacji
+6. ✅ DOZWOLONE: Użycie synonimów i lepszej terminologii branżowej
+
+STANOWISKO DOCELOWE: ${jobDescription || 'Ogólne CV profesjonalne'}
+
+ORYGINALNE CV (UŻYWAJ TYLKO TYCH FAKTÓW):
 ${processedCvText}
 
-DOCELOWE STANOWISKO:
-${jobDescription || 'Ogólne CV profesjonalne'}
+STRUKTURA ZOPTYMALIZOWANEGO CV:
 
-INSTRUKCJE:
-1. **Przeanalizuj oryginalne CV** - wyciągnij wszystkie ważne informacje:
-   - Dane osobowe i kontaktowe
-   - Doświadczenie zawodowe (firmy, stanowiska, daty, obowiązki)
-   - Wykształcenie (uczelnie, kierunki, lata)
-   - Umiejętności (techniczne, językowe, miękkie)
-   - Certyfikaty, kursy, dodatkowe kwalifikacje
+[DANE OSOBOWE]
+- Zachowaj dokładnie dane kontaktowe z oryginalnego CV
 
-2. **Stwórz nowe CV** zawierające:
-   - **Dane kontaktowe** - czytelnie sformatowane
-   - **Profil zawodowy** - atrakcyjny opis 2-3 zdania dostosowany do stanowiska
-   - **Doświadczenie zawodowe** - przepisane z lepszymi opisami, czasownikami akcji i konkretnymi osiągnięciami
-   - **Wykształcenie** - profesjonalnie przedstawione
-   - **Umiejętności** - pogrupowane i zoptymalizowane pod stanowisko
-   - **Dodatkowe sekcje** - jeśli relevantne (języki, certyfikaty, zainteresowania)
+[PODSUMOWANIE ZAWODOWE] 
+- Stwórz zwięzłe podsumowanie na podstawie doświadczenia z CV
+- 2-3 zdania o kluczowych umiejętnościach i doświadczeniu
+- Użyj tylko faktów z oryginalnego CV
 
-3. **Optymalizuj pod kątem**:
-   - Systemy ATS (słowa kluczowe, struktura)
-   - Psychologia rekrutera (pierwsze wrażenie, czytelność)
-   - Dopasowanie do stanowiska (podkreślenie relevantnych umiejętności)
-   - Polski rynek pracy (terminologia, standardy)
+[DOŚWIADCZENIE ZAWODOWE]
+- Zachowaj wszystkie firmy, stanowiska i daty z oryginału
+- Przepisz opisy obowiązków używając lepszych czasowników akcji
+- Każde stanowisko: 3-4 punkty z konkretnymi obowiązkami
+- Różnicuj opisy podobnych stanowisk
 
-4. **Użyj zasad**:
-   - Nowoczesny, profesjonalny format
-   - Konkretne opisy z mierzalnymi wynikami gdzie to możliwe
-   - Dynamiczne czasowniki akcji
-   - Słowa kluczowe z opisu stanowiska
-   - Spójny styl i formatowanie
+[WYKSZTAŁCENIE]
+- Przepisz dokładnie informacje z oryginalnego CV
+- Nie dodawaj kursów których nie ma w oryginale
 
-ZWRÓĆ GOTOWE, KOMPLETNE CV W FORMACIE TEKSTOWYM.
-Nie dodawaj komentarzy ani wyjaśnień - tylko tekst CV.
+[UMIEJĘTNOŚCI]
+- Użyj tylko umiejętności wymienione w oryginalnym CV
+- Pogrupuj je logicznie (Techniczne, Komunikacyjne, itp.)
+
+PRZEPISZ CV zachowując wszystkie oryginalne fakty, ale lepiej je prezentując.
+
+PAMIĘTAJ: Jeśli dodasz choćby jeden wymyślony szczegół, naruszysz zaufanie kandydata!
+
+ZWRÓĆ TYLKO KOMPLETNY TEKST ZOPTYMALIZOWANEGO CV - nic więcej.
+Nie dodawaj JSON, metadanych ani komentarzy.
+Po prostu wygeneruj gotowe CV do użycia.
   `;
 
   return callOpenRouterAPI(prompt, systemPrompt, 4000);
