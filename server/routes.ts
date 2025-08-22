@@ -397,14 +397,7 @@ W przypadku dalszych problemów, skontaktuj się z administratorem.`;
         return res.status(404).json({ error: 'CV not found' });
       }
 
-      // Check rate limits
-      const rateLimitResult = await rateLimiter.checkRateLimit(userId);
-      if (!rateLimitResult.allowed) {
-        return res.status(429).json({ 
-          error: 'Rate limit exceeded',
-          resetTime: rateLimitResult.resetTime 
-        });
-      }
+      
 
       // Generate optimized CV
       const result = await generateOptimizedCv(
