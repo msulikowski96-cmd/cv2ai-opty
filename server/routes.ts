@@ -2,6 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import Stripe from "stripe";
 import multer from "multer";
+import passport from "passport";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
 import { optimizeCv, generateRecruiterFeedback, generateCoverLetter, atsOptimizationCheck, generateInterviewQuestions, generateNewCv } from "./services/openrouter";
@@ -94,6 +95,85 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/dev-logout', (req, res) => {
     req.session.isDeveloper = false;
     res.json({ message: 'Developer logged out successfully' });
+  });
+
+  // Email/Password registration route
+  app.post('/api/register', async (req, res) => {
+    try {
+      const { email, password, firstName, lastName } = req.body;
+
+      if (!email || !password) {
+        return res.status(400).json({ message: 'Email i hasło są wymagane' });
+      }
+
+      if (password.length < 6) {
+        return res.status(400).json({ message: 'Hasło musi mieć co najmniej 6 znaków' });
+      }
+
+      // Check if user already exists
+      const existingUser = await storage.getUserByEmail(email);
+      if (existingUser) {
+        return res.status(400).json({ message: 'Użytkownik z tym emailem już istnieje' });
+      }
+
+      // Create user
+      const user = await storage.createUserWithPassword(email, password, firstName, lastName);
+      
+      // Create usage stats for new user
+      await storage.getOrCreateUsageStats(user.id);
+
+      res.json({ 
+        success: true, 
+        message: 'Konto zostało utworzone pomyślnie',
+        user: {
+          id: user.id,
+          email: user.email,
+          firstName: user.firstName,
+          lastName: user.lastName
+        }
+      });
+    } catch (error) {
+      console.error('Registration error:', error);
+      res.status(500).json({ message: 'Błąd podczas tworzenia konta' });
+    }
+  });
+
+  // Email/Password login route
+  app.post('/api/email-login', (req, res, next) => {
+    passport.authenticate('local', (err: any, user: any, info: any) => {
+      if (err) {
+        return res.status(500).json({ message: 'Błąd serwera' });
+      }
+      
+      if (!user) {
+        return res.status(401).json({ message: info?.message || 'Nieprawidłowe dane logowania' });
+      }
+
+      req.logIn(user, (err) => {
+        if (err) {
+          return res.status(500).json({ message: 'Błąd logowania' });
+        }
+        
+        res.json({ 
+          success: true, 
+          message: 'Zalogowano pomyślnie',
+          user: {
+            id: user.claims.sub,
+            email: user.claims.email,
+            firstName: user.claims.first_name,
+            lastName: user.claims.last_name
+          }
+        });
+      });
+    })(req, res, next);
+  });
+
+  // Universal logout route
+  app.post('/api/logout', (req, res) => {
+    req.logout(() => {
+      req.session.isDeveloper = false;
+      res.json({ message: 'Wylogowano pomyślnie' });
+    });
   });
 
   // Auth routes

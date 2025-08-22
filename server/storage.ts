@@ -17,10 +17,13 @@ import {
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc } from "drizzle-orm";
+import bcrypt from "bcryptjs";
 
 export interface IStorage {
   // User operations (mandatory for Replit Auth)
   getUser(id: string): Promise<User | undefined>;
+  getUserByEmail(email: string): Promise<User | undefined>;
+  createUserWithPassword(email: string, password: string, firstName?: string, lastName?: string): Promise<User>;
   upsertUser(user: UpsertUser): Promise<User>;
   updateUserStripeInfo(userId: string, customerId: string, subscriptionId?: string): Promise<User>;
   updateUserPremium(userId: string, premiumUntil: Date): Promise<User>;
@@ -49,6 +52,26 @@ export class DatabaseStorage implements IStorage {
   // User operations
   async getUser(id: string): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user;
+  }
+
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.email, email));
+    return user;
+  }
+
+  async createUserWithPassword(email: string, password: string, firstName?: string, lastName?: string): Promise<User> {
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const [user] = await db
+      .insert(users)
+      .values({
+        email,
+        password: hashedPassword,
+        firstName,
+        lastName,
+        authProvider: 'email',
+      })
+      .returning();
     return user;
   }
 
