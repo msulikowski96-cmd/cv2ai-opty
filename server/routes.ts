@@ -109,7 +109,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // CV Upload route
-  app.post('/api/upload-cv', isAuthenticated, upload.single('cvFile'), async (req: any, res) => {
+  app.post('/api/upload-cv', isAuthenticatedOrDeveloper, upload.single('cvFile'), async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const file = req.file;
@@ -147,7 +147,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // CV Analysis routes
-  app.post('/api/analyze-cv', isAuthenticated, rateLimiter, async (req: any, res) => {
+  app.post('/api/analyze-cv', isAuthenticatedOrDeveloper, rateLimiter, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const { cvUploadId, analysisType, jobDescription } = req.body;
@@ -217,7 +217,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get user's CV uploads
-  app.get('/api/cv-uploads', isAuthenticated, async (req: any, res) => {
+  app.get('/api/cv-uploads', isAuthenticatedOrDeveloper, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const uploads = await storage.getCvUploadsByUser(userId);
@@ -229,7 +229,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get analysis results for a CV
-  app.get('/api/analysis-results/:cvUploadId', isAuthenticated, async (req: any, res) => {
+  app.get('/api/analysis-results/:cvUploadId', isAuthenticatedOrDeveloper, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const { cvUploadId } = req.params;
@@ -248,7 +248,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get user usage stats
-  app.get('/api/usage-stats', isAuthenticated, async (req: any, res) => {
+  app.get('/api/usage-stats', isAuthenticatedOrDeveloper, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const stats = await storage.getOrCreateUsageStats(userId);
@@ -260,7 +260,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Generate new CV using Qwen 72B
-  app.post('/api/generate-new-cv', isAuthenticated, rateLimiter, async (req: any, res) => {
+  app.post('/api/generate-new-cv', isAuthenticatedOrDeveloper, rateLimiter, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const { personalInfo, experience, education, skills, jobDescription } = req.body;
@@ -300,7 +300,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Stripe payment route for one-time payments (Basic plan)
-  app.post("/api/create-payment-intent", isAuthenticated, async (req: any, res) => {
+  app.post("/api/create-payment-intent", isAuthenticatedOrDeveloper, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const amount = 999; // 9.99 PLN in grosze
