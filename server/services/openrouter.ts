@@ -133,14 +133,13 @@ export async function optimizeCv(
   jobDescription: string, 
   language = 'pl'
 ): Promise<string> {
-  const systemPrompt = `Jesteś ekspertem w optymalizacji CV. Twoja rola to analizowanie i ulepszanie CV tak, aby były bardziej atrakcyjne dla rekruterów i systemów ATS. Odpowiadaj w języku polskim.`;
+  const systemPrompt = `Jesteś światowej klasy ekspertem w tworzeniu profesjonalnych CV, specjalizującym się w pisaniu nowoczesnych, atrakcyjnych CV dopasowanych do polskiego rynku pracy. Posiadasz głęboką wiedzę o trendach rekrutacyjnych, systemach ATS i psychologii przekonywania pracodawców. Odpowiadasz w języku polskim.`;
   
-  // Truncate CV text if too long (keep most important parts)
+  // Truncate CV text if too long
   const maxCvLength = 15000; // characters
   let processedCvText = cvText;
   
   if (cvText.length > maxCvLength) {
-    // Try to keep the beginning and end, which usually contain most important info
     const halfLength = Math.floor(maxCvLength / 2);
     const beginning = cvText.substring(0, halfLength);
     const ending = cvText.substring(cvText.length - halfLength);
@@ -148,28 +147,48 @@ export async function optimizeCv(
   }
   
   const prompt = `
-Proszę zoptymalizować następujące CV pod kątem tej oferty pracy:
+ZADANIE: Stwórz całkowicie nowe, profesjonalne CV na podstawie analizy przesłanego CV i opisu stanowiska.
 
-OFEROWANA POZYCJA:
-${jobDescription || 'Ogólna optymalizacja CV'}
-
-AKTUALNE CV:
+ORYGINALNE CV (do analizy i wyciągnięcia informacji):
 ${processedCvText}
 
-Proszę o:
-1. Analizę zgodności CV z wymaganiami stanowiska
-2. Konkretne sugestie dotyczące:
-   - Struktury i formatowania
-   - Słów kluczowych do dodania
-   - Umiejętności do podkreślenia
-   - Doświadczeń do lepszego opisania
-3. Przepisanie najważniejszych sekcji z sugerowanymi zmianami
-4. Wskazówki dotyczące ATS (Applicant Tracking System)
+DOCELOWE STANOWISKO:
+${jobDescription || 'Ogólne CV profesjonalne'}
 
-Odpowiedź powinna być praktyczna i konkretna, gotowa do implementacji.
+INSTRUKCJE:
+1. **Przeanalizuj oryginalne CV** - wyciągnij wszystkie ważne informacje:
+   - Dane osobowe i kontaktowe
+   - Doświadczenie zawodowe (firmy, stanowiska, daty, obowiązki)
+   - Wykształcenie (uczelnie, kierunki, lata)
+   - Umiejętności (techniczne, językowe, miękkie)
+   - Certyfikaty, kursy, dodatkowe kwalifikacje
+
+2. **Stwórz nowe CV** zawierające:
+   - **Dane kontaktowe** - czytelnie sformatowane
+   - **Profil zawodowy** - atrakcyjny opis 2-3 zdania dostosowany do stanowiska
+   - **Doświadczenie zawodowe** - przepisane z lepszymi opisami, czasownikami akcji i konkretnymi osiągnięciami
+   - **Wykształcenie** - profesjonalnie przedstawione
+   - **Umiejętności** - pogrupowane i zoptymalizowane pod stanowisko
+   - **Dodatkowe sekcje** - jeśli relevantne (języki, certyfikaty, zainteresowania)
+
+3. **Optymalizuj pod kątem**:
+   - Systemy ATS (słowa kluczowe, struktura)
+   - Psychologia rekrutera (pierwsze wrażenie, czytelność)
+   - Dopasowanie do stanowiska (podkreślenie relevantnych umiejętności)
+   - Polski rynek pracy (terminologia, standardy)
+
+4. **Użyj zasad**:
+   - Nowoczesny, profesjonalny format
+   - Konkretne opisy z mierzalnymi wynikami gdzie to możliwe
+   - Dynamiczne czasowniki akcji
+   - Słowa kluczowe z opisu stanowiska
+   - Spójny styl i formatowanie
+
+ZWRÓĆ GOTOWE, KOMPLETNE CV W FORMACIE TEKSTOWYM.
+Nie dodawaj komentarzy ani wyjaśnień - tylko tekst CV.
   `;
 
-  return callOpenRouterAPI(prompt, systemPrompt, 3000);
+  return callOpenRouterAPI(prompt, systemPrompt, 4000);
 }
 
 export async function generateRecruiterFeedback(
