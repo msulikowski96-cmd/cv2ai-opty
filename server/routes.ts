@@ -32,12 +32,72 @@ const upload = multer({
   },
 });
 
+// Developer authentication middleware
+function isDeveloper(req: any, res: any, next: any) {
+  if (req.session.isDeveloper) {
+    req.user = { 
+      claims: { 
+        sub: 'dev-account',
+        email: 'developer@cvoptimizer.local',
+        first_name: 'Developer',
+        last_name: 'Account'
+      }
+    };
+    return next();
+  }
+  return res.status(401).json({ message: 'Developer access required' });
+}
+
+// Combined authentication middleware
+function isAuthenticatedOrDeveloper(req: any, res: any, next: any) {
+  if (req.session.isDeveloper) {
+    req.user = { 
+      claims: { 
+        sub: 'dev-account',
+        email: 'developer@cvoptimizer.local',
+        first_name: 'Developer',
+        last_name: 'Account'
+      }
+    };
+    return next();
+  }
+  return isAuthenticated(req, res, next);
+}
+
 export async function registerRoutes(app: Express): Promise<Server> {
   // Auth middleware
   await setupAuth(app);
 
+  // Developer login route
+  app.post('/api/dev-login', async (req, res) => {
+    const { username, password } = req.body;
+    
+    if (username === 'developer' && password === 'NewDev2024!') {
+      req.session.isDeveloper = true;
+      res.json({ 
+        message: 'Developer logged in successfully',
+        user: {
+          id: 'dev-account',
+          email: 'developer@cvoptimizer.local',
+          firstName: 'Developer',
+          lastName: 'Account',
+          premiumUntil: '2030-12-31T23:59:59.000Z',
+          basicPurchased: true
+        }
+      });
+    } else {
+      res.status(401).json({ message: 'Invalid developer credentials' });
+    }
+  });
+
+  // Developer logout route
+  app.post('/api/dev-logout', (req, res) => {
+    req.session.isDeveloper = false;
+    res.json({ message: 'Developer logged out successfully' });
+  });
+
   // Auth routes
-  app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
+  app.get('/api/auth/user', isAuthenticatedOrDeveloper, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
